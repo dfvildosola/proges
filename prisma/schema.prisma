@@ -1,0 +1,48 @@
+// Proges — schema de Prisma.
+// Fase 0: modelo mínimo para validar el pipeline (migrar + consultar).
+// El modelo de datos completo (Owner, Document, LeaseContract, etc.) se construye en la Fase 1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PropertyType {
+  DEPARTAMENTO
+  CASA
+  OFICINA
+  LOCAL
+  BODEGA
+  ESTACIONAMIENTO
+  TERRENO
+  PARCELA
+  AGRICOLA
+}
+
+enum PropertyStatus {
+  ARRENDADA
+  DISPONIBLE
+  EN_VENTA
+  USO_PROPIO
+  DESOCUPADA
+}
+
+model Property {
+  id             String         @id @default(cuid())
+  // Aislamiento multi-tenant: cada propiedad pertenece a una organización (cliente) de Clerk.
+  organizationId String
+  rolSII         String
+  tipo           PropertyType
+  direccion      String
+  comuna         String
+  region         String
+  estado         PropertyStatus @default(DISPONIBLE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([organizationId])
+}

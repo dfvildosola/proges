@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: proges-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: proges
+      POSTGRES_PASSWORD: proges_dev
+      POSTGRES_DB: proges
+    ports:
+      - "5432:5432"
+    volumes:
+      - proges_pgdata:/var/lib/postgresql/data
+
+volumes:
+  proges_pgdata:
