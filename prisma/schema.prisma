@@ -1,15 +1,24 @@
-// Proges — schema de Prisma.
-// Fase 0: modelo mínimo para validar el pipeline (migrar + consultar).
-// El modelo de datos completo (Owner, Document, LeaseContract, etc.) se construye en la Fase 1.
+// Proges — schema del núcleo (Fase 1).
+// Modelo de gestión de patrimonio inmobiliario. Ver PLAN.md §2.
+//
+// Convenciones:
+// - Toda tabla de negocio lleva `organizationId` (aislamiento futuro; hoy valor fijo).
+// - Montos y porcentajes en Decimal (precisión exacta; nunca float para dinero).
+// - Multimoneda: cada monto guarda su `moneda` (CLP/UF); se convierte en lectura.
+// - Archivos nunca en la DB: Document guarda metadatos + `blobKey` (binario en Blob).
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
 
 enum PropertyType {
   DEPARTAMENTO
@@ -31,18 +40,330 @@ enum PropertyStatus {
   DESOCUPADA
 }
 
+enum PropertyGoal {
+  INVERSION
+  USO_PROPIO
+  VENTA
+}
+
+enum Currency {
+  CLP
+  UF
+}
+
+enum OwnerType {
+  PERSONA
+  SOCIEDAD
+}
+
+enum ContractStatus {
+  VIGENTE
+  POR_VENCER
+  VENCIDO
+  RENOVADO
+  TERMINADO
+}
+
+enum AdjustmentType {
+  NINGUNO
+  IPC
+  UF
+}
+
+enum ChargeStatus {
+  PENDIENTE
+  PAGADO
+  ATRASADO
+}
+
+enum MovementType {
+  INGRESO
+  GASTO
+}
+
+enum MovementCategory {
+  ARRIENDO
+  REPARACION
+  GASTO_COMUN
+  SEGURO
+  IMPUESTO
+  OTRO
+}
+
+enum TaxStatus {
+  PENDIENTE
+  PAGADA
+}
+
+enum DocumentType {
+  ESCRITURA
+  DOMINIO_VIGENTE
+  INSCRIPCION_CBR
+  HIPOTECA
+  NO_EXPROPIACION
+  SEGURO
+  CONTRATO
+  PRESUPUESTO
+  FOTO
+  OTRO
+}
+
+enum AlertType {
+  ARRENDADA_SIN_CONTRATO
+  CONTRATO_POR_VENCER
+  ARRIENDO_ATRASADO
+  CONTRIBUCION_IMPAGA
+  DESOCUPADA_PROLONGADA
+}
+
+enum AlertSeverity {
+  INFO
+  MEDIA
+  ALTA
+}
+
+enum AlertStatus {
+  ACTIVA
+  RESUELTA
+}
+
+enum RateType {
+  UF
+  IPC
+}
+
+// ----------------------------------------------------------------------------
+// Propiedades
+// ----------------------------------------------------------------------------
+
 model Property {
   id             String         @id @default(cuid())
-  // Aislamiento multi-tenant: cada propiedad pertenece a una organización (cliente) de Clerk.
   organizationId String
   rolSII         String
   tipo           PropertyType
   direccion      String
   comuna         String
   region         String
+  objetivo       PropertyGoal   @default(INVERSION)
   estado         PropertyStatus @default(DISPONIBLE)
+  monedaPrincipal Currency      @default(CLP)
+  avaluoFiscal   Decimal?       @db.Decimal(14, 2)
+  valorComercial Decimal?       @db.Decimal(14, 2)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  owners    PropertyOwner[]
+  tags      PropertyTag[]   @relation("PropertyToTag")
+  documents Document[]
+  contracts LeaseContract[]
+  movements Movement[]
+  taxes     PropertyTax[]
+  alerts    Alert[]
+
   @@index([organizationId])
+}
+
+model PropertyTag {
+  id             String     @id @default(cuid())
+  organizationId String
+  nombre         String
+  properties     Property[] @relation("PropertyToTag")
+
+  @@unique([organizationId, nombre])
+  @@index([organizationId])
+}
+
+model Owner {
+  id             String          @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String
+  tipo           OwnerType       @default(PERSONA)
+  properties     PropertyOwner[]
+
+  @@index([organizationId])
+}
+
+// Puente de copropiedad: varios dueños por propiedad, cada uno con su %.
+model PropertyOwner {
+  id             String   @id @default(cuid())
+  organizationId String
+  propertyId     String
+  ownerId        String
+  porcentaje     Decimal  @db.Decimal(5, 2)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  owner    Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, ownerId])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------------
+// Contratos de arriendo
+// ----------------------------------------------------------------------------
+
+model Tenant {
+  id             String          @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String
+  email          String?
+  telefono       String?
+  contracts      LeaseContract[]
+
+  @@index([organizationId])
+}
+
+model LeaseContract {
+  id                      String         @id @default(cuid())
+  organizationId          String
+  propertyId              String
+  tenantId                String
+  monto                   Decimal        @db.Decimal(14, 2)
+  moneda                  Currency       @default(CLP)
+  aplicaReajuste          Boolean        @default(false)
+  reajusteTipo            AdjustmentType @default(NINGUNO)
+  reajusteFrecuenciaMeses Int?
+  fechaInicio             DateTime
+  fechaTermino            DateTime
+  diaPago                 Int
+  estado                  ContractStatus @default(VIGENTE)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  property Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  charges  RentCharge[]
+  alerts   Alert[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// ----------------------------------------------------------------------------
+// Control económico
+// ----------------------------------------------------------------------------
+
+// Cobro de arriendo por período. El corazón de la cobranza.
+model RentCharge {
+  id              String       @id @default(cuid())
+  organizationId  String
+  contractId      String
+  periodo         String // "YYYY-MM"
+  montoEsperado   Decimal      @db.Decimal(14, 2)
+  moneda          Currency     @default(CLP)
+  fechaVencimiento DateTime
+  estado          ChargeStatus @default(PENDIENTE)
+  fechaPago       DateTime?
+  montoPagado     Decimal?     @db.Decimal(14, 2)
+  interesMora     Decimal?     @db.Decimal(14, 2) // manual en MVP
+  notas           String?
+
+  contract  LeaseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  movements Movement[]
+
+  @@unique([contractId, periodo])
+  @@index([organizationId])
+}
+
+model Movement {
+  id             String           @id @default(cuid())
+  organizationId String
+  propertyId     String
+  tipo           MovementType
+  categoria      MovementCategory
+  monto          Decimal          @db.Decimal(14, 2)
+  moneda         Currency         @default(CLP)
+  fecha          DateTime
+  descripcion    String?
+  documentId     String?
+  rentChargeId   String?
+
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  document   Document?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  rentCharge RentCharge? @relation(fields: [rentChargeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+model PropertyTax {
+  id              String    @id @default(cuid())
+  organizationId  String
+  propertyId      String
+  anio            Int
+  cuota           Int // 1-4
+  monto           Decimal   @db.Decimal(14, 2)
+  fechaVencimiento DateTime
+  estado          TaxStatus @default(PENDIENTE)
+  fechaPago       DateTime?
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, anio, cuota])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------------
+// Documental
+// ----------------------------------------------------------------------------
+
+// Metadatos + puntero al archivo. El binario vive en Vercel Blob (privado).
+// `extractedText`/embeddings (silver/gold) son post-MVP — reservados, no se llenan aún.
+model Document {
+  id             String       @id @default(cuid())
+  organizationId String
+  propertyId     String
+  tipo           DocumentType
+  nombre         String
+  blobKey        String // puntero al objeto en Vercel Blob
+  fechaEmision   DateTime?
+  fechaVencimiento DateTime? // alimenta alertas de vencimiento
+  // Campos Conservador (opcionales)
+  fojas          String?
+  numero         String?
+  anio           Int?
+  // Reservado para IA (post-MVP): texto extraído del PDF/imagen
+  extractedText  String?
+  createdAt      DateTime     @default(now())
+
+  property  Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  movements Movement[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// ----------------------------------------------------------------------------
+// Alertas (autocontrol) y soporte
+// ----------------------------------------------------------------------------
+
+model Alert {
+  id             String        @id @default(cuid())
+  organizationId String
+  tipo           AlertType
+  severidad      AlertSeverity @default(MEDIA)
+  mensaje        String
+  propertyId     String?
+  contractId     String?
+  estado         AlertStatus   @default(ACTIVA)
+  createdAt      DateTime      @default(now())
+  resolvedAt     DateTime?
+
+  property Property?      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  contract LeaseContract? @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([estado])
+}
+
+// Valores UF/IPC para convertir entre CLP y UF en informes. Global (sin organizationId).
+model CurrencyValue {
+  id    String   @id @default(cuid())
+  fecha DateTime
+  tipo  RateType
+  valor Decimal  @db.Decimal(14, 4)
+
+  @@unique([fecha, tipo])
 }
