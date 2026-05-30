@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, Pencil, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,13 @@ import {
   propertyStatusLabels,
   propertyGoalLabels,
   currencyLabels,
+  ownerTypeLabels,
   propertyStatusVariant,
 } from "@/lib/domain";
 import { formatMoney } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
+import { AddOwnerForm, AddTagForm } from "./owners-tags-forms";
+import { removeOwner, removeTag } from "../actions";
 
 function DataRow({ label, value }: { label: string; value: string }) {
   return (
@@ -40,8 +43,17 @@ export default async function PropiedadDetallePage({
   const orgId = await getOrgId();
   const p = await db.property.findFirst({
     where: { id, organizationId: orgId },
+    include: {
+      owners: { include: { owner: true }, orderBy: { porcentaje: "desc" } },
+      tags: { orderBy: { nombre: "asc" } },
+    },
   });
   if (!p) notFound();
+
+  const totalPorcentaje = p.owners.reduce(
+    (sum, po) => sum + Number(po.porcentaje),
+    0,
+  );
 
   return (
     <>
@@ -109,6 +121,88 @@ export default async function PropiedadDetallePage({
               label="Valor comercial"
               value={formatMoney(p.valorComercial)}
             />
+          </div>
+
+          {/* Dueños (copropiedad) */}
+          <div className="mt-6">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Dueños</h2>
+              {p.owners.length > 0 && (
+                <Badge variant={totalPorcentaje === 100 ? "outline" : "secondary"}>
+                  {totalPorcentaje}% asignado
+                </Badge>
+              )}
+            </div>
+            {p.owners.length === 0 ? (
+              <p className="mb-3 text-sm text-muted-foreground">
+                Sin dueños cargados.
+              </p>
+            ) : (
+              <div className="mb-3 rounded-lg border px-4">
+                {p.owners.map((po) => (
+                  <div
+                    key={po.id}
+                    className="flex items-center justify-between border-b py-3 last:border-0"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">
+                        {po.owner.nombre}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {ownerTypeLabels[po.owner.tipo]} · {po.owner.rut}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {Number(po.porcentaje)}%
+                      </span>
+                      <form action={removeOwner}>
+                        <input type="hidden" name="propertyOwnerId" value={po.id} />
+                        <input type="hidden" name="propertyId" value={p.id} />
+                        <button
+                          type="submit"
+                          aria-label="Quitar dueño"
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <AddOwnerForm propertyId={p.id} />
+          </div>
+
+          {/* Etiquetas */}
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold">Etiquetas</h2>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {p.tags.length === 0 ? (
+                <span className="text-sm text-muted-foreground">
+                  Sin etiquetas.
+                </span>
+              ) : (
+                p.tags.map((t) => (
+                  <Badge key={t.id} variant="secondary" className="gap-1 pr-1">
+                    {t.nombre}
+                    <form action={removeTag} className="inline-flex">
+                      <input type="hidden" name="propertyId" value={p.id} />
+                      <input type="hidden" name="tagId" value={t.id} />
+                      <button
+                        type="submit"
+                        aria-label={`Quitar ${t.nombre}`}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </form>
+                  </Badge>
+                ))
+              )}
+            </div>
+            <AddTagForm propertyId={p.id} />
           </div>
         </TabsContent>
 

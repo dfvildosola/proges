@@ -5,6 +5,7 @@ import {
   PropertyStatus,
   PropertyGoal,
   Currency,
+  OwnerType,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -36,6 +37,11 @@ export const propertyGoalLabels: Record<PropertyGoal, string> = {
 export const currencyLabels: Record<Currency, string> = {
   CLP: "Pesos (CLP)",
   UF: "UF",
+};
+
+export const ownerTypeLabels: Record<OwnerType, string> = {
+  PERSONA: "Persona",
+  SOCIEDAD: "Sociedad",
 };
 
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.
