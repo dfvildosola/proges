@@ -16,7 +16,18 @@ export function formatMoney(
 }
 
 // Fecha corta en formato chileno (dd-mm-aaaa). "—" si es nula.
+// Las fechas del dominio son "solo fecha" (sin hora real): se guardan a medianoche
+// UTC y se leen/formatean en UTC para evitar corrimientos de día por zona horaria.
 export function formatDate(value: Date | null | undefined): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("es-CL").format(value);
+  return new Intl.DateTimeFormat("es-CL", { timeZone: "UTC" }).format(value);
+}
+
+// Valor "YYYY-MM-DD" para un <input type="date"> a partir de una fecha guardada.
+export function toDateInputValue(value: Date | null | undefined): string {
+  if (!value) return "";
+  const y = value.getUTCFullYear();
+  const m = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(value.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }

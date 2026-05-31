@@ -6,6 +6,8 @@ import {
   PropertyGoal,
   Currency,
   OwnerType,
+  ContractStatus,
+  AdjustmentType,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -44,6 +46,20 @@ export const ownerTypeLabels: Record<OwnerType, string> = {
   SOCIEDAD: "Sociedad",
 };
 
+export const contractStatusLabels: Record<ContractStatus, string> = {
+  VIGENTE: "Vigente",
+  POR_VENCER: "Por vencer",
+  VENCIDO: "Vencido",
+  RENOVADO: "Renovado",
+  TERMINADO: "Terminado",
+};
+
+export const adjustmentTypeLabels: Record<AdjustmentType, string> = {
+  NINGUNO: "Sin reajuste",
+  IPC: "IPC",
+  UF: "UF",
+};
+
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.
 export function enumOptions<T extends Record<string, string>>(
   labels: T,
@@ -60,6 +76,22 @@ export function propertyStatusVariant(
       return "default";
     case "EN_VENTA":
       return "secondary";
+    default:
+      return "outline";
+  }
+}
+
+// Variante de color del badge según el estado del contrato.
+export function contractStatusVariant(
+  estado: ContractStatus,
+): "default" | "secondary" | "outline" | "destructive" {
+  switch (estado) {
+    case "VIGENTE":
+      return "default";
+    case "POR_VENCER":
+      return "secondary";
+    case "VENCIDO":
+      return "destructive";
     default:
       return "outline";
   }
