@@ -42,15 +42,18 @@ const columns: ColumnDef<TenantRow>[] = [
   {
     accessorKey: "nombre",
     header: sortHeader("Nombre"),
+    size: 200,
     cell: ({ row }) => <span className="font-medium">{row.original.nombre}</span>,
   },
   {
     accessorKey: "rut",
     header: sortHeader("RUT"),
+    size: 140,
   },
   {
     accessorKey: "email",
     header: sortHeader("Email"),
+    size: 220,
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.email ?? "—"}</span>
     ),
@@ -58,6 +61,7 @@ const columns: ColumnDef<TenantRow>[] = [
   {
     accessorKey: "telefono",
     header: sortHeader("Teléfono"),
+    size: 160,
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.telefono ?? "—"}
@@ -67,6 +71,7 @@ const columns: ColumnDef<TenantRow>[] = [
   {
     accessorKey: "contratos",
     header: sortHeader("Contratos"),
+    size: 110,
     cell: ({ row }) =>
       row.original.contratos > 0 ? (
         <Badge variant="secondary">{row.original.contratos}</Badge>
@@ -76,6 +81,8 @@ const columns: ColumnDef<TenantRow>[] = [
   },
   {
     id: "acciones",
+    size: 90,
+    enableResizing: false,
     header: () => <span className="sr-only">Acciones</span>,
     cell: ({ row }) => (
       <div className="flex items-center justify-end gap-1">

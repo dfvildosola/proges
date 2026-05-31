@@ -79,6 +79,7 @@ const columns: ColumnDef<PropertyRow>[] = [
   {
     accessorKey: "rolSII",
     header: sortHeader("ROL"),
+    size: 120,
     cell: ({ row }) => (
       <span className="font-medium">{row.original.rolSII}</span>
     ),
@@ -86,20 +87,24 @@ const columns: ColumnDef<PropertyRow>[] = [
   {
     accessorKey: "tipo",
     header: sortHeader("Tipo"),
+    size: 140,
     cell: ({ row }) => propertyTypeLabels[row.original.tipo],
     filterFn: inArray,
   },
   {
     accessorKey: "direccion",
     header: sortHeader("Dirección"),
+    size: 240,
   },
   {
     accessorKey: "comuna",
     header: sortHeader("Comuna"),
+    size: 140,
   },
   {
     accessorKey: "region",
     header: sortHeader("Región"),
+    size: 130,
   },
   {
     accessorKey: "objetivo",
@@ -110,6 +115,7 @@ const columns: ColumnDef<PropertyRow>[] = [
   {
     accessorKey: "estado",
     header: sortHeader("Estado"),
+    size: 130,
     cell: ({ row }) => (
       <Badge variant={propertyStatusVariant(row.original.estado)}>
         {propertyStatusLabels[row.original.estado]}
@@ -120,6 +126,7 @@ const columns: ColumnDef<PropertyRow>[] = [
   {
     accessorKey: "monedaPrincipal",
     header: sortHeader("Moneda"),
+    size: 110,
     cell: ({ row }) => currencyLabels[row.original.monedaPrincipal],
   },
   {

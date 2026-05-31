@@ -64,6 +64,7 @@ const columns: ColumnDef<ContractRow>[] = [
   {
     accessorKey: "propertyRol",
     header: sortHeader("Propiedad"),
+    size: 220,
     cell: ({ row }) => (
       <div>
         <span className="font-medium">{row.original.propertyRol}</span>
@@ -76,9 +77,11 @@ const columns: ColumnDef<ContractRow>[] = [
   {
     accessorKey: "tenantNombre",
     header: sortHeader("Arrendatario"),
+    size: 180,
   },
   {
     accessorKey: "monto",
+    size: 140,
     header: ({ column }) => (
       <div className="text-right">
         <DataTableColumnHeader column={column} title="Arriendo" />
@@ -93,6 +96,7 @@ const columns: ColumnDef<ContractRow>[] = [
   {
     accessorKey: "reajusteTipo",
     header: sortHeader("Reajuste"),
+    size: 120,
     cell: ({ row }) =>
       row.original.aplicaReajuste
         ? adjustmentTypeLabels[row.original.reajusteTipo]
@@ -102,6 +106,7 @@ const columns: ColumnDef<ContractRow>[] = [
   {
     accessorKey: "fechaInicio",
     header: sortHeader("Vigencia"),
+    size: 190,
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
         {formatDate(new Date(row.original.fechaInicio))} →{" "}
@@ -112,6 +117,7 @@ const columns: ColumnDef<ContractRow>[] = [
   {
     accessorKey: "estado",
     header: sortHeader("Estado"),
+    size: 120,
     cell: ({ row }) => (
       <Badge variant={contractStatusVariant(row.original.estado)}>
         {contractStatusLabels[row.original.estado]}
