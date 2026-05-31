@@ -6,6 +6,7 @@ import {
   PropertyGoal,
   Currency,
   OwnerType,
+  PropertyUnitType,
   ContractStatus,
   AdjustmentType,
 } from "@/generated/prisma/enums";
@@ -44,6 +45,11 @@ export const currencyLabels: Record<Currency, string> = {
 export const ownerTypeLabels: Record<OwnerType, string> = {
   PERSONA: "Persona",
   SOCIEDAD: "Sociedad",
+};
+
+export const propertyUnitTypeLabels: Record<PropertyUnitType, string> = {
+  ESTACIONAMIENTO: "Estacionamiento",
+  BODEGA: "Bodega",
 };
 
 export const contractStatusLabels: Record<ContractStatus, string> = {

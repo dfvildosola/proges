@@ -11,6 +11,7 @@ import {
   PropertyGoal,
   Currency,
   OwnerType,
+  PropertyUnitType,
 } from "@/generated/prisma/enums";
 
 export type PropertyFormState = {
@@ -245,6 +246,65 @@ export async function removeTag(formData: FormData): Promise<void> {
   await db.property.update({
     where: { id: propertyId },
     data: { tags: { disconnect: { id: tagId } } },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Anexos (estacionamientos y bodegas)
+// ---------------------------------------------------------------------------
+
+// Campo de texto opcional: "" del form queda como null.
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v === undefined || v === "" ? null : v));
+
+const unitSchema = z.object({
+  tipo: enumField(PropertyUnitType),
+  numero: z.string().trim().min(1, "El número o identificador es obligatorio"),
+  rolSII: optionalText,
+  avaluoFiscal: moneyField,
+});
+
+export async function addUnit(
+  _prev: PropertyFormState,
+  formData: FormData,
+): Promise<PropertyFormState> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!propertyId) return { error: "Falta la propiedad." };
+
+  const parsed = unitSchema.safeParse({
+    tipo: formData.get("tipo"),
+    numero: formData.get("numero"),
+    rolSII: formData.get("rolSII") ?? "",
+    avaluoFiscal: formData.get("avaluoFiscal") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  }
+
+  const orgId = await getOrgId();
+  if (!(await assertProperty(propertyId, orgId)))
+    return { error: "Propiedad no encontrada." };
+
+  await db.propertyUnit.create({
+    data: { organizationId: orgId, propertyId, ...parsed.data },
+  });
+
+  revalidatePath(`/propiedades/${propertyId}`);
+  return {};
+}
+
+export async function removeUnit(formData: FormData): Promise<void> {
+  const unitId = String(formData.get("unitId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!unitId) return;
+
+  const orgId = await getOrgId();
+  await db.propertyUnit.deleteMany({
+    where: { id: unitId, organizationId: orgId },
   });
   revalidatePath(`/propiedades/${propertyId}`);
 }

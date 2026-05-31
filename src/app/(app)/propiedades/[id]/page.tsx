@@ -21,13 +21,14 @@ import {
   currencyLabels,
   ownerTypeLabels,
   propertyStatusVariant,
+  propertyUnitTypeLabels,
   contractStatusLabels,
   contractStatusVariant,
 } from "@/lib/domain";
 import { formatMoney, formatDate } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
-import { AddOwnerForm, AddTagForm } from "./owners-tags-forms";
-import { removeOwner, removeTag } from "../actions";
+import { AddOwnerForm, AddTagForm, AddUnitForm } from "./owners-tags-forms";
+import { removeOwner, removeTag, removeUnit } from "../actions";
 
 // Par etiqueta/valor dentro de una grilla de definición.
 function DataItem({ label, value }: { label: string; value: string }) {
@@ -70,6 +71,7 @@ export default async function PropiedadDetallePage({
     include: {
       owners: { include: { owner: true }, orderBy: { porcentaje: "desc" } },
       tags: { orderBy: { nombre: "asc" } },
+      units: { orderBy: [{ tipo: "asc" }, { numero: "asc" }] },
       contracts: {
         include: { tenant: { select: { nombre: true, rut: true } } },
         orderBy: { fechaInicio: "desc" },
@@ -251,6 +253,54 @@ export default async function PropiedadDetallePage({
                 )}
               </div>
               <AddTagForm propertyId={p.id} />
+            </CardContent>
+          </Card>
+
+          {/* Anexos (estacionamientos y bodegas) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Anexos (estacionamientos y bodegas)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {p.units.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin estacionamientos ni bodegas cargados.
+                </p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {p.units.map((u) => (
+                    <div
+                      key={u.id}
+                      className="flex items-center justify-between px-3 py-2.5"
+                    >
+                      <div>
+                        <span className="text-sm font-medium">
+                          {propertyUnitTypeLabels[u.tipo]} {u.numero}
+                        </span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {u.rolSII ? `ROL ${u.rolSII}` : "Sin ROL"}
+                          {u.avaluoFiscal != null &&
+                            ` · av. ${formatMoney(u.avaluoFiscal)}`}
+                        </span>
+                      </div>
+                      <form action={removeUnit}>
+                        <input type="hidden" name="unitId" value={u.id} />
+                        <input type="hidden" name="propertyId" value={p.id} />
+                        <button
+                          type="submit"
+                          aria-label="Quitar anexo"
+                          className="text-muted-foreground transition-colors hover:text-destructive"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <AddUnitForm propertyId={p.id} />
             </CardContent>
           </Card>
         </TabsContent>

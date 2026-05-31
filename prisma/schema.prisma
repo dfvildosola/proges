@@ -56,6 +56,11 @@ enum OwnerType {
   SOCIEDAD
 }
 
+enum PropertyUnitType {
+  ESTACIONAMIENTO
+  BODEGA
+}
+
 enum ContractStatus {
   VIGENTE
   POR_VENCER
@@ -154,6 +159,7 @@ model Property {
 
   owners    PropertyOwner[]
   tags      PropertyTag[]   @relation("PropertyToTag")
+  units     PropertyUnit[]
   documents Document[]
   contracts LeaseContract[]
   movements Movement[]
@@ -161,6 +167,24 @@ model Property {
   alerts    Alert[]
 
   @@index([organizationId])
+}
+
+// Anexo de una propiedad: estacionamiento o bodega. En Chile suelen tener su
+// propio ROL y avalúo (para contribuciones), pero se administran junto a la
+// unidad principal. ROL y avalúo son opcionales.
+model PropertyUnit {
+  id             String           @id @default(cuid())
+  organizationId String
+  propertyId     String
+  tipo           PropertyUnitType
+  numero         String
+  rolSII         String?
+  avaluoFiscal   Decimal?         @db.Decimal(14, 2)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([propertyId])
 }
 
 model PropertyTag {
