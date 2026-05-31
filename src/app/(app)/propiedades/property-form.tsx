@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -74,7 +81,12 @@ export function PropertyForm({
     <form action={formAction} className="max-w-2xl">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Datos de la propiedad</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="ROL SII" htmlFor="rolSII" error={err("rolSII")}>
           <Input
             id="rolSII"
@@ -203,20 +215,21 @@ export function PropertyForm({
             defaultValue={initial?.valorComercial}
           />
         </Field>
-      </div>
+          </div>
 
-      {state?.error && (
-        <p className="mt-4 text-sm text-destructive">{state.error}</p>
-      )}
-
-      <div className="mt-6 flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : submitLabel}
-        </Button>
-        <Button variant="outline" render={<Link href="/propiedades" />}>
-          Cancelar
-        </Button>
-      </div>
+          {state?.error && (
+            <p className="mt-4 text-sm text-destructive">{state.error}</p>
+          )}
+        </CardContent>
+        <CardFooter className="gap-3 border-t">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Guardando…" : submitLabel}
+          </Button>
+          <Button variant="outline" render={<Link href="/propiedades" />}>
+            Cancelar
+          </Button>
+        </CardFooter>
+      </Card>
     </form>
   );
 }

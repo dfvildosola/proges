@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { PropertyForm } from "../../property-form";
 import { updateProperty } from "../../actions";
@@ -19,13 +18,7 @@ export default async function EditarPropiedadPage({
 
   return (
     <>
-      <Link
-        href={`/propiedades/${p.id}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" />
-        Volver a la ficha
-      </Link>
+      <BackLink href={`/propiedades/${p.id}`}>Volver a la ficha</BackLink>
       <PageHeader title="Editar propiedad" description={p.rolSII} />
       <PropertyForm
         action={updateProperty}

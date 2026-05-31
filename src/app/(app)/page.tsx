@@ -1,5 +1,11 @@
 import { Building2, Percent, Wallet, Bell } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const kpis = [
   { label: "Propiedades", value: "—", icon: Building2 },
@@ -20,24 +26,31 @@ export default function InicioPage() {
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <div key={kpi.label} className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+            <Card key={kpi.label}>
+              <CardHeader>
+                <CardDescription className="flex items-center justify-between">
                   {kpi.label}
-                </span>
-                <Icon className="size-4 text-muted-foreground" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold">{kpi.value}</p>
-            </div>
+                  <Icon className="size-4" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-semibold tabular-nums">
+                  {kpi.value}
+                </CardTitle>
+              </CardHeader>
+            </Card>
           );
         })}
       </div>
 
-      <div className="mt-8 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-        Aquí aparecerán las alertas activas (propiedades arrendadas sin contrato,
-        arriendos atrasados, contribuciones impagas, contratos por vencer).
-        Se construye en la Fase 5.
-      </div>
+      <Card className="mt-8 border-dashed shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">Alertas activas</CardTitle>
+          <CardDescription>
+            Aquí aparecerán las alertas activas (propiedades arrendadas sin
+            contrato, arriendos atrasados, contribuciones impagas, contratos por
+            vencer). Se construye en la Fase 5.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </>
   );
 }

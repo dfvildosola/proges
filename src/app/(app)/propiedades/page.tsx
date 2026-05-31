@@ -5,20 +5,7 @@ import { getOrgId } from "@/lib/org";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  propertyTypeLabels,
-  propertyStatusLabels,
-  propertyStatusVariant,
-} from "@/lib/domain";
+import { PropertiesTable, type PropertyRow } from "./properties-table";
 
 export default async function PropiedadesPage() {
   const orgId = await getOrgId();
@@ -27,72 +14,49 @@ export default async function PropiedadesPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Aplanamos a una forma serializable (Decimal/Date no cruzan a Client Components).
+  const rows: PropertyRow[] = properties.map((p) => ({
+    id: p.id,
+    rolSII: p.rolSII,
+    tipo: p.tipo,
+    direccion: p.direccion,
+    comuna: p.comuna,
+    region: p.region,
+    objetivo: p.objetivo,
+    estado: p.estado,
+    monedaPrincipal: p.monedaPrincipal,
+    avaluoFiscal: p.avaluoFiscal ? Number(p.avaluoFiscal) : null,
+    valorComercial: p.valorComercial ? Number(p.valorComercial) : null,
+    createdAt: p.createdAt.toISOString(),
+  }));
+
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
-        <PageHeader
-          title="Propiedades"
-          description="Tu cartera. Cada propiedad abre su ficha con documentos, contrato, económico y alertas."
-        />
-        <Button render={<Link href="/propiedades/nueva" />}>
-          <Plus className="size-4" />
-          Nueva propiedad
-        </Button>
-      </div>
+      <PageHeader
+        title="Propiedades"
+        description="Tu cartera. Cada propiedad abre su ficha con documentos, contrato, económico y alertas."
+        action={
+          <Button render={<Link href="/propiedades/nueva" />}>
+            <Plus className="size-4" />
+            Nueva propiedad
+          </Button>
+        }
+      />
 
-      {properties.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
           icon={Building2}
           title="Todavía no hay propiedades"
           description="Crea la primera propiedad para empezar a cargar tu cartera."
+          action={
+            <Button render={<Link href="/propiedades/nueva" />}>
+              <Plus className="size-4" />
+              Nueva propiedad
+            </Button>
+          }
         />
       ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ROL</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Dirección</TableHead>
-                <TableHead>Comuna</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {properties.map((p) => (
-                <TableRow key={p.id} className="cursor-pointer">
-                  <TableCell className="font-medium">
-                    <Link href={`/propiedades/${p.id}`} className="block">
-                      {p.rolSII}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/propiedades/${p.id}`} className="block">
-                      {propertyTypeLabels[p.tipo]}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/propiedades/${p.id}`} className="block">
-                      {p.direccion}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/propiedades/${p.id}`} className="block">
-                      {p.comuna}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/propiedades/${p.id}`} className="block">
-                      <Badge variant={propertyStatusVariant(p.estado)}>
-                        {propertyStatusLabels[p.estado]}
-                      </Badge>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <PropertiesTable data={rows} />
       )}
     </>
   );
