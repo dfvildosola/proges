@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -24,11 +25,24 @@ import {
   propertyUnitTypeLabels,
   contractStatusLabels,
   contractStatusVariant,
+  movementTypeLabels,
+  movementCategoryLabels,
+  taxStatusLabels,
+  movementTypeVariant,
+  taxStatusVariant,
 } from "@/lib/domain";
 import { formatMoney, formatDate } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { AddOwnerForm, AddTagForm, AddUnitForm } from "./owners-tags-forms";
-import { removeOwner, removeTag, removeUnit } from "../actions";
+import { AddMovementForm, AddTaxForm } from "./economic-forms";
+import {
+  removeOwner,
+  removeTag,
+  removeUnit,
+  removeMovement,
+  markTaxPaid,
+  removeTax,
+} from "../actions";
 
 // Par etiqueta/valor dentro de una grilla de definición.
 function DataItem({ label, value }: { label: string; value: string }) {
@@ -76,6 +90,8 @@ export default async function PropiedadDetallePage({
         include: { tenant: { select: { nombre: true, rut: true } } },
         orderBy: { fechaInicio: "desc" },
       },
+      movements: { orderBy: { fecha: "desc" } },
+      taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
     },
   });
   if (!p) notFound();
@@ -373,17 +389,150 @@ export default async function PropiedadDetallePage({
           )}
         </TabsContent>
 
-        <TabsContent value="economico" className="mt-6">
-          <ComingSoon fase="Fase 4">
-            Aquí van los ingresos y gastos de la propiedad, y su rentabilidad.
-          </ComingSoon>
+        <TabsContent value="economico" className="mt-6 max-w-3xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Movimientos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {p.movements.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin movimientos registrados.
+                </p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {p.movements.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-start justify-between px-3 py-2.5"
+                    >
+                      <div>
+                        <span className="text-sm font-medium tabular-nums">
+                          {formatMoney(m.monto, m.moneda)}
+                        </span>
+                        <Badge
+                          variant={movementTypeVariant(m.tipo)}
+                          className="ml-2 text-xs"
+                        >
+                          {movementTypeLabels[m.tipo]}
+                        </Badge>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {movementCategoryLabels[m.categoria]}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {formatDate(m.fecha)}
+                          {m.descripcion && ` · ${m.descripcion}`}
+                        </span>
+                      </div>
+                      <form action={removeMovement}>
+                        <input type="hidden" name="movementId" value={m.id} />
+                        <input type="hidden" name="propertyId" value={p.id} />
+                        <button
+                          type="submit"
+                          aria-label="Quitar movimiento"
+                          className="text-muted-foreground transition-colors hover:text-destructive"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t">
+              <AddMovementForm propertyId={p.id} />
+            </CardFooter>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="contribuciones" className="mt-6">
-          <ComingSoon fase="Fase 4">
-            Aquí se registran las contribuciones (impuesto territorial) por año y
-            cuota.
-          </ComingSoon>
+        <TabsContent value="contribuciones" className="mt-6 max-w-3xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Contribuciones</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {p.taxes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin contribuciones registradas.
+                </p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {p.taxes.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <span className="text-sm font-medium">
+                          Cuota {t.cuota} · {t.anio}
+                        </span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {formatMoney(t.monto)} · vence{" "}
+                          {formatDate(t.fechaVencimiento)}
+                        </span>
+                        {t.estado === "PAGADA" && t.fechaPago && (
+                          <span className="block text-xs text-muted-foreground">
+                            Pagada el {formatDate(t.fechaPago)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={taxStatusVariant(t.estado)}>
+                          {taxStatusLabels[t.estado]}
+                        </Badge>
+                        {t.estado === "PENDIENTE" && (
+                          <form
+                            action={markTaxPaid}
+                            className="flex items-center gap-1"
+                          >
+                            <input type="hidden" name="taxId" value={t.id} />
+                            <input
+                              type="hidden"
+                              name="propertyId"
+                              value={p.id}
+                            />
+                            <Input
+                              name="fechaPago"
+                              type="date"
+                              required
+                              className="h-7 w-36 text-xs"
+                            />
+                            <Button
+                              type="submit"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                            >
+                              Marcar pagada
+                            </Button>
+                          </form>
+                        )}
+                        <form action={removeTax}>
+                          <input type="hidden" name="taxId" value={t.id} />
+                          <input
+                            type="hidden"
+                            name="propertyId"
+                            value={p.id}
+                          />
+                          <button
+                            type="submit"
+                            aria-label="Quitar contribución"
+                            className="text-muted-foreground transition-colors hover:text-destructive"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t">
+              <AddTaxForm propertyId={p.id} />
+            </CardFooter>
+          </Card>
         </TabsContent>
 
         <TabsContent value="alertas" className="mt-6">

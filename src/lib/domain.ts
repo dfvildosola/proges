@@ -9,6 +9,10 @@ import {
   PropertyUnitType,
   ContractStatus,
   AdjustmentType,
+  ChargeStatus,
+  MovementType,
+  MovementCategory,
+  TaxStatus,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -65,6 +69,56 @@ export const adjustmentTypeLabels: Record<AdjustmentType, string> = {
   IPC: "IPC",
   UF: "UF",
 };
+
+export const chargeStatusLabels: Record<ChargeStatus, string> = {
+  PENDIENTE: "Pendiente",
+  PAGADO: "Pagado",
+  ATRASADO: "Atrasado",
+};
+
+export const movementTypeLabels: Record<MovementType, string> = {
+  INGRESO: "Ingreso",
+  GASTO: "Gasto",
+};
+
+export const movementCategoryLabels: Record<MovementCategory, string> = {
+  ARRIENDO: "Arriendo",
+  REPARACION: "Reparación",
+  GASTO_COMUN: "Gasto común",
+  SEGURO: "Seguro",
+  IMPUESTO: "Impuesto",
+  OTRO: "Otro",
+};
+
+export const taxStatusLabels: Record<TaxStatus, string> = {
+  PENDIENTE: "Pendiente",
+  PAGADA: "Pagada",
+};
+
+export function chargeStatusVariant(
+  estado: ChargeStatus,
+): "default" | "secondary" | "destructive" {
+  switch (estado) {
+    case "PAGADO":
+      return "default";
+    case "ATRASADO":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
+export function taxStatusVariant(
+  estado: TaxStatus,
+): "default" | "secondary" {
+  return estado === "PAGADA" ? "default" : "secondary";
+}
+
+export function movementTypeVariant(
+  tipo: MovementType,
+): "default" | "secondary" {
+  return tipo === "INGRESO" ? "default" : "secondary";
+}
 
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.
 export function enumOptions<T extends Record<string, string>>(

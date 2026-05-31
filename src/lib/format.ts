@@ -31,3 +31,14 @@ export function toDateInputValue(value: Date | null | undefined): string {
   const d = String(value.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+// Formatea "YYYY-MM" → "mayo 2026" en español.
+export function formatPeriodo(periodo: string): string {
+  const [year, month] = periodo.split("-").map(Number);
+  if (!year || !month) return periodo;
+  return new Intl.DateTimeFormat("es-CL", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}

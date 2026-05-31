@@ -12,6 +12,9 @@ import {
   Currency,
   OwnerType,
   PropertyUnitType,
+  MovementType,
+  MovementCategory,
+  TaxStatus,
 } from "@/generated/prisma/enums";
 
 export type PropertyFormState = {
@@ -305,6 +308,192 @@ export async function removeUnit(formData: FormData): Promise<void> {
   const orgId = await getOrgId();
   await db.propertyUnit.deleteMany({
     where: { id: unitId, organizationId: orgId },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Movimientos (ingresos / gastos)
+// ---------------------------------------------------------------------------
+
+const dateField = z
+  .string()
+  .trim()
+  .min(1, "La fecha es obligatoria")
+  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), {
+    message: "Fecha inválida",
+  })
+  .transform((v) => new Date(`${v}T00:00:00Z`));
+
+const requiredMoneyField = z
+  .string()
+  .trim()
+  .min(1, "El monto es obligatorio")
+  .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
+    message: "Debe ser un número válido",
+  });
+
+export type MovementFormState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+const movementSchema = z.object({
+  tipo: enumField(MovementType),
+  categoria: enumField(MovementCategory),
+  monto: requiredMoneyField,
+  moneda: enumField(Currency),
+  fecha: dateField,
+  descripcion: optionalText,
+});
+
+export async function addMovement(
+  _prev: MovementFormState,
+  formData: FormData,
+): Promise<MovementFormState> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!propertyId) return { error: "Falta la propiedad." };
+
+  const parsed = movementSchema.safeParse({
+    tipo: formData.get("tipo"),
+    categoria: formData.get("categoria"),
+    monto: formData.get("monto"),
+    moneda: formData.get("moneda"),
+    fecha: formData.get("fecha"),
+    descripcion: formData.get("descripcion") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  }
+
+  const orgId = await getOrgId();
+  if (!(await assertProperty(propertyId, orgId)))
+    return { error: "Propiedad no encontrada." };
+
+  await db.movement.create({
+    data: {
+      organizationId: orgId,
+      propertyId,
+      tipo: parsed.data.tipo,
+      categoria: parsed.data.categoria,
+      monto: parsed.data.monto,
+      moneda: parsed.data.moneda,
+      fecha: parsed.data.fecha,
+      descripcion: parsed.data.descripcion,
+    },
+  });
+
+  revalidatePath(`/propiedades/${propertyId}`);
+  return {};
+}
+
+export async function removeMovement(formData: FormData): Promise<void> {
+  const movementId = String(formData.get("movementId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!movementId) return;
+
+  const orgId = await getOrgId();
+  await db.movement.deleteMany({
+    where: { id: movementId, organizationId: orgId },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Contribuciones (impuesto territorial)
+// ---------------------------------------------------------------------------
+
+export type TaxFormState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+const taxSchema = z.object({
+  anio: z
+    .string()
+    .trim()
+    .min(1, "El año es obligatorio")
+    .refine(
+      (v) => Number.isInteger(Number(v)) && Number(v) >= 2000 && Number(v) <= 2100,
+      { message: "Año inválido" },
+    ),
+  cuota: z
+    .string()
+    .trim()
+    .min(1, "La cuota es obligatoria")
+    .refine((v) => ["1", "2", "3", "4"].includes(v), {
+      message: "La cuota debe ser 1, 2, 3 o 4",
+    }),
+  monto: requiredMoneyField,
+  fechaVencimiento: dateField,
+});
+
+export async function addTax(
+  _prev: TaxFormState,
+  formData: FormData,
+): Promise<TaxFormState> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!propertyId) return { error: "Falta la propiedad." };
+
+  const parsed = taxSchema.safeParse({
+    anio: formData.get("anio"),
+    cuota: formData.get("cuota"),
+    monto: formData.get("monto"),
+    fechaVencimiento: formData.get("fechaVencimiento"),
+  });
+  if (!parsed.success) {
+    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  }
+
+  const orgId = await getOrgId();
+  if (!(await assertProperty(propertyId, orgId)))
+    return { error: "Propiedad no encontrada." };
+
+  try {
+    await db.propertyTax.create({
+      data: {
+        organizationId: orgId,
+        propertyId,
+        anio: Number(parsed.data.anio),
+        cuota: Number(parsed.data.cuota),
+        monto: parsed.data.monto,
+        fechaVencimiento: parsed.data.fechaVencimiento,
+        estado: TaxStatus.PENDIENTE,
+      },
+    });
+  } catch {
+    return { error: "Ya existe una contribución para ese año y cuota." };
+  }
+
+  revalidatePath(`/propiedades/${propertyId}`);
+  return {};
+}
+
+export async function markTaxPaid(formData: FormData): Promise<void> {
+  const taxId = String(formData.get("taxId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  const fechaPagoStr = String(formData.get("fechaPago") ?? "");
+  if (!taxId || !fechaPagoStr) return;
+
+  const fechaPago = new Date(`${fechaPagoStr}T00:00:00Z`);
+  if (Number.isNaN(fechaPago.getTime())) return;
+
+  const orgId = await getOrgId();
+  await db.propertyTax.updateMany({
+    where: { id: taxId, organizationId: orgId },
+    data: { estado: TaxStatus.PAGADA, fechaPago },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+export async function removeTax(formData: FormData): Promise<void> {
+  const taxId = String(formData.get("taxId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!taxId) return;
+
+  const orgId = await getOrgId();
+  await db.propertyTax.deleteMany({
+    where: { id: taxId, organizationId: orgId },
   });
   revalidatePath(`/propiedades/${propertyId}`);
 }
