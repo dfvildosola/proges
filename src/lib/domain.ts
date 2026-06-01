@@ -13,6 +13,8 @@ import {
   MovementType,
   MovementCategory,
   TaxStatus,
+  AlertType,
+  AlertSeverity,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -118,6 +120,33 @@ export function movementTypeVariant(
   tipo: MovementType,
 ): "default" | "secondary" {
   return tipo === "INGRESO" ? "default" : "secondary";
+}
+
+export const alertTypeLabels: Record<AlertType, string> = {
+  ARRENDADA_SIN_CONTRATO: "Arrendada sin contrato",
+  CONTRATO_POR_VENCER: "Contrato por vencer",
+  ARRIENDO_ATRASADO: "Arriendo atrasado",
+  CONTRIBUCION_IMPAGA: "Contribución impaga",
+  DESOCUPADA_PROLONGADA: "Desocupada prolongada",
+};
+
+export const alertSeverityLabels: Record<AlertSeverity, string> = {
+  INFO: "Info",
+  MEDIA: "Media",
+  ALTA: "Alta",
+};
+
+export function alertSeverityVariant(
+  severidad: AlertSeverity,
+): "default" | "secondary" | "destructive" {
+  switch (severidad) {
+    case "ALTA":
+      return "destructive";
+    case "MEDIA":
+      return "secondary";
+    default:
+      return "default";
+  }
 }
 
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.

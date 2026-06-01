@@ -30,7 +30,11 @@ import {
   taxStatusLabels,
   movementTypeVariant,
   taxStatusVariant,
+  alertTypeLabels,
+  alertSeverityLabels,
+  alertSeverityVariant,
 } from "@/lib/domain";
+import { resolveAlert } from "../../pendientes/actions";
 import { formatMoney, formatDate, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
@@ -94,6 +98,10 @@ export default async function PropiedadDetallePage({
       },
       movements: { orderBy: { fecha: "desc" } },
       taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
+      alerts: {
+        where: { estado: "ACTIVA" },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!p) notFound();
@@ -620,11 +628,57 @@ export default async function PropiedadDetallePage({
           </Card>
         </TabsContent>
 
-        <TabsContent value="alertas" className="mt-6">
-          <ComingSoon fase="Fase 5">
-            Aquí aparecen las alertas de autocontrol específicas de esta
-            propiedad.
-          </ComingSoon>
+        <TabsContent value="alertas" className="mt-6 max-w-3xl">
+          {p.alerts.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 p-6">
+              <p className="text-sm text-muted-foreground">
+                Sin alertas activas para esta propiedad.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y rounded-xl border">
+              {p.alerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={alertSeverityVariant(alert.severidad)}>
+                        {alertSeverityLabels[alert.severidad]}
+                      </Badge>
+                      <span className="text-sm font-medium">
+                        {alertTypeLabels[alert.tipo]}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {alert.mensaje}
+                    </p>
+                    {alert.contractId && (
+                      <Link
+                        href={`/contratos/${alert.contractId}`}
+                        className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        Ver contrato →
+                      </Link>
+                    )}
+                  </div>
+                  <form action={resolveAlert}>
+                    <input type="hidden" name="alertId" value={alert.id} />
+                    <input type="hidden" name="propertyId" value={p.id} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="submit"
+                      className="shrink-0"
+                    >
+                      Resolver
+                    </Button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </>
