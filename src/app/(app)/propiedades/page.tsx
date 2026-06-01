@@ -25,7 +25,6 @@ export default async function PropiedadesPage() {
     objetivo: p.objetivo,
     estado: p.estado,
     monedaPrincipal: p.monedaPrincipal,
-    avaluoFiscal: p.avaluoFiscal ? Number(p.avaluoFiscal) : null,
     valorComercial: p.valorComercial ? Number(p.valorComercial) : null,
     createdAt: p.createdAt.toISOString(),
   }));

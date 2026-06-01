@@ -38,7 +38,6 @@ export type PropertyRow = {
   objetivo: PropertyGoal;
   estado: PropertyStatus;
   monedaPrincipal: Currency;
-  avaluoFiscal: number | null;
   valorComercial: number | null;
   createdAt: string;
 };
@@ -60,7 +59,6 @@ const columnLabels: Record<string, string> = {
   objetivo: "Objetivo",
   estado: "Estado",
   monedaPrincipal: "Moneda",
-  avaluoFiscal: "Avalúo fiscal",
   valorComercial: "Valor comercial",
   createdAt: "Creada",
 };
@@ -130,15 +128,6 @@ const columns: ColumnDef<PropertyRow>[] = [
     cell: ({ row }) => currencyLabels[row.original.monedaPrincipal],
   },
   {
-    accessorKey: "avaluoFiscal",
-    header: ({ column }) => (
-      <div className="text-right">
-        <DataTableColumnHeader column={column} title="Avalúo fiscal" />
-      </div>
-    ),
-    cell: ({ row }) => moneyCell(row.original.avaluoFiscal),
-  },
-  {
     accessorKey: "valorComercial",
     header: ({ column }) => (
       <div className="text-right">
@@ -171,7 +160,6 @@ export function PropertiesTable({ data }: { data: PropertyRow[] }) {
         region: false,
         objetivo: false,
         monedaPrincipal: false,
-        avaluoFiscal: false,
         valorComercial: false,
         createdAt: false,
       }}

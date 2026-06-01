@@ -32,6 +32,16 @@ export function toDateInputValue(value: Date | null | undefined): string {
   return `${y}-${m}-${d}`;
 }
 
+// Formatea metros cuadrados con hasta 2 decimales. "—" si es nulo.
+export function formatM2(
+  value: { toString(): string } | number | null | undefined,
+): string {
+  if (value === null || value === undefined) return "—";
+  const n = Number(value.toString());
+  if (Number.isNaN(n)) return "—";
+  return `${new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 }).format(n)} m²`;
+}
+
 // Formatea "YYYY-MM" → "mayo 2026" en español.
 export function formatPeriodo(periodo: string): string {
   const [year, month] = periodo.split("-").map(Number);

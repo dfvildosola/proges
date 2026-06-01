@@ -16,7 +16,7 @@ import {
   propertyUnitTypeLabels,
   enumOptions,
 } from "@/lib/domain";
-import { addOwner, addTag, addUnit } from "../actions";
+import { addOwner, addTag, addUnit, addAssessment } from "../actions";
 
 export function AddOwnerForm({ propertyId }: { propertyId: string }) {
   const [state, formAction, pending] = useActionState(addOwner, {});
@@ -111,6 +111,47 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
         <Plus className="size-4" />
         Agregar
       </Button>
+    </form>
+  );
+}
+
+export function AddAssessmentForm({ propertyId }: { propertyId: string }) {
+  const [state, formAction, pending] = useActionState(addAssessment, {});
+  const err = (f: string) => state?.fieldErrors?.[f];
+
+  return (
+    <form
+      action={formAction}
+      className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[auto_1fr_auto]"
+    >
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div>
+        <Input
+          name="anio"
+          type="number"
+          step="1"
+          min="1800"
+          max="2100"
+          placeholder="Año"
+          className="w-24"
+        />
+        {err("anio") && (
+          <p className="mt-1 text-xs text-destructive">{err("anio")}</p>
+        )}
+      </div>
+      <div>
+        <Input name="valor" type="number" step="0.01" min="0" placeholder="Valor ($)" />
+        {err("valor") && (
+          <p className="mt-1 text-xs text-destructive">{err("valor")}</p>
+        )}
+      </div>
+      <Button type="submit" variant="outline" disabled={pending}>
+        <Plus className="size-4" />
+        Agregar
+      </Button>
+      {state?.error && (
+        <p className="col-span-full text-xs text-destructive">{state.error}</p>
+      )}
     </form>
   );
 }

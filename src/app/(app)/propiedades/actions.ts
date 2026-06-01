@@ -32,6 +32,17 @@ const moneyField = z
     message: "Debe ser un número válido",
   });
 
+// Año opcional: viene como string del form; queda como number o null.
+const optionalYearField = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v === undefined || v === "" ? null : Number(v)))
+  .refine(
+    (v) => v === null || (Number.isInteger(v) && v >= 1800 && v <= 2100),
+    { message: "Año inválido" },
+  );
+
 // Preserva el tipo literal del enum (p. ej. PropertyType) en vez de `string`,
 // para que el resultado de zod calce con el tipo que Prisma espera.
 const enumField = <T extends Record<string, string>>(e: T) =>
@@ -46,7 +57,9 @@ const propertySchema = z.object({
   objetivo: enumField(PropertyGoal),
   estado: enumField(PropertyStatus),
   monedaPrincipal: enumField(Currency),
-  avaluoFiscal: moneyField,
+  m2Terreno: moneyField,
+  m2Construidos: moneyField,
+  anoConstruccion: optionalYearField,
   valorComercial: moneyField,
 });
 
@@ -60,7 +73,9 @@ function parse(formData: FormData) {
     objetivo: formData.get("objetivo"),
     estado: formData.get("estado"),
     monedaPrincipal: formData.get("monedaPrincipal"),
-    avaluoFiscal: formData.get("avaluoFiscal") ?? "",
+    m2Terreno: formData.get("m2Terreno") ?? "",
+    m2Construidos: formData.get("m2Construidos") ?? "",
+    anoConstruccion: formData.get("anoConstruccion") ?? "",
     valorComercial: formData.get("valorComercial") ?? "",
   });
 }
@@ -494,6 +509,70 @@ export async function removeTax(formData: FormData): Promise<void> {
   const orgId = await getOrgId();
   await db.propertyTax.deleteMany({
     where: { id: taxId, organizationId: orgId },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Avalúos fiscales (historial)
+// ---------------------------------------------------------------------------
+
+const assessmentSchema = z.object({
+  anio: z
+    .string()
+    .trim()
+    .min(1, "El año es obligatorio")
+    .refine(
+      (v) => Number.isInteger(Number(v)) && Number(v) >= 1800 && Number(v) <= 2100,
+      { message: "Año inválido" },
+    ),
+  valor: requiredMoneyField,
+});
+
+export async function addAssessment(
+  _prev: PropertyFormState,
+  formData: FormData,
+): Promise<PropertyFormState> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!propertyId) return { error: "Falta la propiedad." };
+
+  const parsed = assessmentSchema.safeParse({
+    anio: formData.get("anio"),
+    valor: formData.get("valor"),
+  });
+  if (!parsed.success) {
+    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  }
+
+  const orgId = await getOrgId();
+  if (!(await assertProperty(propertyId, orgId)))
+    return { error: "Propiedad no encontrada." };
+
+  try {
+    await db.propertyAssessment.create({
+      data: {
+        organizationId: orgId,
+        propertyId,
+        anio: Number(parsed.data.anio),
+        valor: parsed.data.valor,
+      },
+    });
+  } catch {
+    return { error: "Ya existe un avalúo para ese año." };
+  }
+
+  revalidatePath(`/propiedades/${propertyId}`);
+  return {};
+}
+
+export async function removeAssessment(formData: FormData): Promise<void> {
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!assessmentId) return;
+
+  const orgId = await getOrgId();
+  await db.propertyAssessment.deleteMany({
+    where: { id: assessmentId, organizationId: orgId },
   });
   revalidatePath(`/propiedades/${propertyId}`);
 }

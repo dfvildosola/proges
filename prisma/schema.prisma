@@ -152,14 +152,17 @@ model Property {
   objetivo       PropertyGoal   @default(INVERSION)
   estado         PropertyStatus @default(DISPONIBLE)
   monedaPrincipal Currency      @default(CLP)
-  avaluoFiscal   Decimal?       @db.Decimal(14, 2)
+  m2Terreno      Decimal?       @db.Decimal(10, 2)
+  m2Construidos  Decimal?       @db.Decimal(10, 2)
+  anoConstruccion Int?
   valorComercial Decimal?       @db.Decimal(14, 2)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  owners    PropertyOwner[]
-  tags      PropertyTag[]   @relation("PropertyToTag")
-  units     PropertyUnit[]
+  owners      PropertyOwner[]
+  tags        PropertyTag[]        @relation("PropertyToTag")
+  units       PropertyUnit[]
+  assessments PropertyAssessment[]
   documents Document[]
   contracts LeaseContract[]
   movements Movement[]
@@ -183,6 +186,23 @@ model PropertyUnit {
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// Historial de avalúos fiscales de la propiedad (uno por año).
+// Se usa para calcular el % de reajuste entre períodos.
+model PropertyAssessment {
+  id             String   @id @default(cuid())
+  organizationId String
+  propertyId     String
+  anio           Int
+  valor          Decimal  @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, anio])
   @@index([organizationId])
   @@index([propertyId])
 }

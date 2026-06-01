@@ -31,14 +31,15 @@ import {
   movementTypeVariant,
   taxStatusVariant,
 } from "@/lib/domain";
-import { formatMoney, formatDate } from "@/lib/format";
+import { formatMoney, formatDate, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
-import { AddOwnerForm, AddTagForm, AddUnitForm } from "./owners-tags-forms";
+import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
 import { AddMovementForm, AddTaxForm } from "./economic-forms";
 import {
   removeOwner,
   removeTag,
   removeUnit,
+  removeAssessment,
   removeMovement,
   markTaxPaid,
   removeTax,
@@ -86,6 +87,7 @@ export default async function PropiedadDetallePage({
       owners: { include: { owner: true }, orderBy: { porcentaje: "desc" } },
       tags: { orderBy: { nombre: "asc" } },
       units: { orderBy: [{ tipo: "asc" }, { numero: "asc" }] },
+      assessments: { orderBy: { anio: "desc" } },
       contracts: {
         include: { tenant: { select: { nombre: true, rut: true } } },
         orderBy: { fechaInicio: "desc" },
@@ -161,8 +163,16 @@ export default async function PropiedadDetallePage({
                   value={currencyLabels[p.monedaPrincipal]}
                 />
                 <DataItem
-                  label="Avalúo fiscal"
-                  value={formatMoney(p.avaluoFiscal)}
+                  label="M² terreno"
+                  value={formatM2(p.m2Terreno)}
+                />
+                <DataItem
+                  label="M² construidos"
+                  value={formatM2(p.m2Construidos)}
+                />
+                <DataItem
+                  label="Año construcción"
+                  value={p.anoConstruccion ? String(p.anoConstruccion) : "—"}
                 />
                 <DataItem
                   label="Valor comercial"
@@ -270,6 +280,81 @@ export default async function PropiedadDetallePage({
               </div>
               <AddTagForm propertyId={p.id} />
             </CardContent>
+          </Card>
+
+          {/* Avalúo fiscal — historial */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Avalúo fiscal</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {p.assessments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin avalúos cargados.
+                </p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {p.assessments.map((a, i) => {
+                    const prev = p.assessments[i + 1];
+                    const pct =
+                      prev && Number(prev.valor) > 0
+                        ? ((Number(a.valor) - Number(prev.valor)) /
+                            Number(prev.valor)) *
+                          100
+                        : null;
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between px-3 py-2.5"
+                      >
+                        <div>
+                          <span className="text-sm font-medium tabular-nums">
+                            {formatMoney(a.valor)}
+                          </span>
+                          <span className="ml-2 text-xs font-medium text-muted-foreground">
+                            {a.anio}
+                          </span>
+                          {pct !== null && prev && (
+                            <span
+                              className={`ml-2 text-xs tabular-nums ${
+                                pct >= 0
+                                  ? "text-emerald-600"
+                                  : "text-destructive"
+                              }`}
+                            >
+                              {pct >= 0 ? "+" : ""}
+                              {pct.toFixed(1)}% vs {prev.anio}
+                            </span>
+                          )}
+                        </div>
+                        <form action={removeAssessment}>
+                          <input
+                            type="hidden"
+                            name="assessmentId"
+                            value={a.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="propertyId"
+                            value={p.id}
+                          />
+                          <button
+                            type="submit"
+                            aria-label="Quitar avalúo"
+                            className="text-muted-foreground transition-colors hover:text-destructive"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </form>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t">
+              <AddAssessmentForm propertyId={p.id} />
+            </CardFooter>
           </Card>
 
           {/* Anexos (estacionamientos y bodegas) */}

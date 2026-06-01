@@ -38,7 +38,9 @@ export type PropertyValues = {
   objetivo?: string;
   estado?: string;
   monedaPrincipal?: string;
-  avaluoFiscal?: string;
+  m2Terreno?: string;
+  m2Construidos?: string;
+  anoConstruccion?: string;
   valorComercial?: string;
 };
 
@@ -187,17 +189,51 @@ export function PropertyForm({
         </Field>
 
         <Field
-          label="Avalúo fiscal (opcional)"
-          htmlFor="avaluoFiscal"
-          error={err("avaluoFiscal")}
+          label="M² terreno (opcional)"
+          htmlFor="m2Terreno"
+          error={err("m2Terreno")}
         >
           <Input
-            id="avaluoFiscal"
-            name="avaluoFiscal"
+            id="m2Terreno"
+            name="m2Terreno"
             type="number"
             step="0.01"
             min="0"
-            defaultValue={initial?.avaluoFiscal}
+            placeholder="0"
+            defaultValue={initial?.m2Terreno}
+          />
+        </Field>
+
+        <Field
+          label="M² construidos (opcional)"
+          htmlFor="m2Construidos"
+          error={err("m2Construidos")}
+        >
+          <Input
+            id="m2Construidos"
+            name="m2Construidos"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0"
+            defaultValue={initial?.m2Construidos}
+          />
+        </Field>
+
+        <Field
+          label="Año construcción (opcional)"
+          htmlFor="anoConstruccion"
+          error={err("anoConstruccion")}
+        >
+          <Input
+            id="anoConstruccion"
+            name="anoConstruccion"
+            type="number"
+            step="1"
+            min="1800"
+            max="2100"
+            placeholder="2000"
+            defaultValue={initial?.anoConstruccion}
           />
         </Field>
 

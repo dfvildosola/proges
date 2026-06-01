@@ -33,7 +33,9 @@ export default async function EditarPropiedadPage({
           objetivo: p.objetivo,
           estado: p.estado,
           monedaPrincipal: p.monedaPrincipal,
-          avaluoFiscal: p.avaluoFiscal?.toString(),
+          m2Terreno: p.m2Terreno?.toString(),
+          m2Construidos: p.m2Construidos?.toString(),
+          anoConstruccion: p.anoConstruccion?.toString(),
           valorComercial: p.valorComercial?.toString(),
         }}
       />

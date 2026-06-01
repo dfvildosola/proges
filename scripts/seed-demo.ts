@@ -26,7 +26,9 @@ async function main() {
       objetivo: "INVERSION",
       estado: "ARRENDADA",
       monedaPrincipal: "UF",
-      avaluoFiscal: "3850.5",
+      m2Terreno: "72",
+      m2Construidos: "68",
+      anoConstruccion: 2010,
       valorComercial: "5200",
       tags: {
         create: [
