@@ -106,6 +106,17 @@ export default async function PropiedadDetallePage({
   });
   if (!p) notFound();
 
+  // Entidades existentes (para reutilizar en vez de duplicar), excluyendo las
+  // que ya figuran como dueñas de esta propiedad.
+  const yaDueños = new Set(p.owners.map((po) => po.ownerId));
+  const entidadesDisponibles = (
+    await db.owner.findMany({
+      where: { organizationId: orgId },
+      select: { id: true, nombre: true, tipo: true },
+      orderBy: { nombre: "asc" },
+    })
+  ).filter((o) => !yaDueños.has(o.id));
+
   const totalPorcentaje = p.owners.reduce(
     (sum, po) => sum + Number(po.porcentaje),
     0,
@@ -252,7 +263,7 @@ export default async function PropiedadDetallePage({
               )}
             </CardContent>
             <CardFooter className="border-t">
-              <AddOwnerForm propertyId={p.id} />
+              <AddOwnerForm propertyId={p.id} entidades={entidadesDisponibles} />
             </CardFooter>
           </Card>
 

@@ -158,20 +158,24 @@ async function assertProperty(propertyId: string, orgId: string) {
   });
 }
 
-const ownerSchema = z.object({
+const porcentajeField = z
+  .string()
+  .trim()
+  .min(1, "El porcentaje es obligatorio")
+  .refine(
+    (v) => !Number.isNaN(Number(v)) && Number(v) > 0 && Number(v) <= 100,
+    { message: "Debe ser un número entre 0 y 100" },
+  );
+
+const newOwnerSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es obligatorio"),
   rut: z.string().trim().min(1, "El RUT es obligatorio"),
   tipo: enumField(OwnerType),
-  porcentaje: z
-    .string()
-    .trim()
-    .min(1, "El porcentaje es obligatorio")
-    .refine(
-      (v) => !Number.isNaN(Number(v)) && Number(v) > 0 && Number(v) <= 100,
-      { message: "Debe ser un número entre 0 y 100" },
-    ),
 });
 
+// Agrega un dueño a la propiedad. Puede REUTILIZAR una entidad existente
+// (`ownerId`) o crear una nueva (nombre/rut/tipo). Así una misma sociedad/persona
+// no se duplica entre propiedades — base para agruparlas por grupo económico.
 export async function addOwner(
   _prev: PropertyFormState,
   formData: FormData,
@@ -179,27 +183,49 @@ export async function addOwner(
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!propertyId) return { error: "Falta la propiedad." };
 
-  const parsed = ownerSchema.safeParse({
-    nombre: formData.get("nombre"),
-    rut: formData.get("rut"),
-    tipo: formData.get("tipo"),
-    porcentaje: formData.get("porcentaje"),
-  });
-  if (!parsed.success) {
-    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  const porcentaje = porcentajeField.safeParse(formData.get("porcentaje") ?? "");
+  if (!porcentaje.success) {
+    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(porcentaje.error) };
   }
 
   const orgId = await getOrgId();
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
-  const { nombre, rut, tipo, porcentaje } = parsed.data;
-  // En MVP cada alta crea un Owner nuevo (un selector de dueños existentes es post-MVP).
-  const owner = await db.owner.create({
-    data: { organizationId: orgId, nombre, rut, tipo },
+  // Entidad existente o nueva
+  const existingOwnerId = String(formData.get("ownerId") ?? "").trim();
+  let ownerId: string;
+  if (existingOwnerId) {
+    const owner = await db.owner.findFirst({
+      where: { id: existingOwnerId, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!owner) return { error: "Entidad no encontrada." };
+    ownerId = owner.id;
+  } else {
+    const parsed = newOwnerSchema.safeParse({
+      nombre: formData.get("nombre"),
+      rut: formData.get("rut"),
+      tipo: formData.get("tipo"),
+    });
+    if (!parsed.success) {
+      return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+    }
+    const created = await db.owner.create({
+      data: { organizationId: orgId, ...parsed.data },
+    });
+    ownerId = created.id;
+  }
+
+  // Evita duplicar la copropiedad (única por propiedad+entidad).
+  const dup = await db.propertyOwner.findFirst({
+    where: { propertyId, ownerId },
+    select: { id: true },
   });
+  if (dup) return { error: "Esa entidad ya figura como dueña de esta propiedad." };
+
   await db.propertyOwner.create({
-    data: { organizationId: orgId, propertyId, ownerId: owner.id, porcentaje },
+    data: { organizationId: orgId, propertyId, ownerId, porcentaje: porcentaje.data },
   });
 
   revalidatePath(`/propiedades/${propertyId}`);

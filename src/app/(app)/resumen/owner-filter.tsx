@@ -4,19 +4,24 @@ import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 
 const ALL = "__all__";
 
-// Selector de dueño: navega a /resumen?owner=ID (o sin parámetro para toda la
-// cartera). Al elegir un dueño, la página pondera todo por su % de propiedad.
+// Selector del resumen: "Toda la cartera", un grupo económico (consolida todas
+// sus entidades) o una entidad individual. El valor va prefijado: `grupo:<id>`
+// o `owner:<id>`, y se navega a /resumen?sel=...
 export function OwnerFilter({
+  grupos,
   owners,
   value,
 }: {
+  grupos: { id: string; nombre: string }[];
   owners: { id: string; nombre: string }[];
   value: string | null;
 }) {
@@ -24,21 +29,39 @@ export function OwnerFilter({
 
   function onChange(next: string | null) {
     if (!next || next === ALL) router.push("/resumen");
-    else router.push(`/resumen?owner=${next}`);
+    else router.push(`/resumen?sel=${encodeURIComponent(next)}`);
   }
 
+  // Mapa valor→etiqueta para que el trigger muestre el nombre (no el id).
+  const items: Record<string, string> = { [ALL]: "Toda la cartera" };
+  for (const g of grupos) items[`grupo:${g.id}`] = `${g.nombre} (grupo)`;
+  for (const o of owners) items[`owner:${o.id}`] = o.nombre;
+
   return (
-    <Select value={value ?? ALL} onValueChange={onChange}>
-      <SelectTrigger className="w-56">
+    <Select items={items} value={value ?? ALL} onValueChange={onChange}>
+      <SelectTrigger className="w-64">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ALL}>Toda la cartera</SelectItem>
-        {owners.map((o) => (
-          <SelectItem key={o.id} value={o.id}>
-            {o.nombre}
-          </SelectItem>
-        ))}
+        {grupos.length > 0 && (
+          <SelectGroup>
+            <SelectLabel>Grupos económicos</SelectLabel>
+            {grupos.map((g) => (
+              <SelectItem key={g.id} value={`grupo:${g.id}`}>
+                {g.nombre}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
+        <SelectGroup>
+          <SelectLabel>Entidades</SelectLabel>
+          {owners.map((o) => (
+            <SelectItem key={o.id} value={`owner:${o.id}`}>
+              {o.nombre}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
