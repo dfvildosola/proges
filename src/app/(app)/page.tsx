@@ -33,14 +33,14 @@ export default async function InicioPage() {
     db.property.count({ where: { organizationId: orgId } }),
     db.property.count({ where: { organizationId: orgId, estado: "ARRENDADA" } }),
     db.alert.count({ where: { organizationId: orgId, estado: "ACTIVA" } }),
-    db.movement.aggregate({
+    db.rentCharge.aggregate({
       where: {
         organizationId: orgId,
-        tipo: "INGRESO",
+        estado: "PAGADO",
         moneda: "CLP",
-        fecha: { gte: startOfMonth, lte: endOfMonth },
+        fechaPago: { gte: startOfMonth, lte: endOfMonth },
       },
-      _sum: { monto: true },
+      _sum: { montoPagado: true },
     }),
   ]);
 
@@ -56,8 +56,8 @@ export default async function InicioPage() {
     },
     {
       label: "Ingreso del mes",
-      value: formatMoney(ingresosMes._sum.monto),
-      sub: "solo CLP",
+      value: formatMoney(ingresosMes._sum.montoPagado),
+      sub: "arriendos CLP cobrados",
       icon: Wallet,
     },
     {

@@ -52,7 +52,9 @@ export function Combobox({
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </PopoverTrigger>
         <PopoverContent className="w-(--anchor-width) p-0" align="start" sideOffset={4}>
-          <Command>
+          <Command filter={(value, search) =>
+            value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }>
             <CommandInput placeholder={searchPlaceholder} />
             <CommandList>
               <CommandEmpty>{emptyText}</CommandEmpty>

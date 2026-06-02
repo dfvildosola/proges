@@ -415,17 +415,20 @@ export default async function PropiedadDetallePage({
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-6">
-          <ComingSoon fase="Fase: Documental">
-            Aquí se suben y clasifican los documentos legales de la propiedad
-            (escritura, dominio vigente, inscripción CBR, seguros).
-          </ComingSoon>
+          <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-center">
+            <p className="text-sm font-medium">Sin documentos cargados</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              La carga de documentos (escritura, dominio vigente, inscripción CBR, seguros) estará disponible próximamente.
+            </p>
+          </div>
         </TabsContent>
 
         <TabsContent value="contrato" className="mt-6 max-w-3xl">
           {p.contracts.length === 0 ? (
-            <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed bg-muted/30 p-6">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/30 p-8 text-center">
+              <p className="text-sm font-medium">Sin contratos de arriendo</p>
               <p className="text-sm text-muted-foreground">
-                Esta propiedad no tiene contratos de arriendo cargados.
+                Esta propiedad no tiene contratos cargados.
               </p>
               <Button
                 size="sm"
@@ -489,9 +492,12 @@ export default async function PropiedadDetallePage({
             </CardHeader>
             <CardContent className="space-y-3">
               {p.movements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Sin movimientos registrados.
-                </p>
+                <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
+                  <p className="text-sm font-medium">Sin movimientos registrados</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Registra ingresos y gastos asociados a esta propiedad.
+                  </p>
+                </div>
               ) : (
                 <div className="divide-y rounded-lg border">
                   {p.movements.map((m) => (
