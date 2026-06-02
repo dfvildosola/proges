@@ -42,6 +42,7 @@ export type PropertyValues = {
   m2Construidos?: string;
   anoConstruccion?: string;
   valorComercial?: string;
+  valorComercialMoneda?: string;
 };
 
 function Field({
@@ -237,20 +238,40 @@ export function PropertyForm({
           />
         </Field>
 
-        <Field
-          label="Valor comercial (opcional)"
-          htmlFor="valorComercial"
-          error={err("valorComercial")}
-        >
-          <Input
-            id="valorComercial"
-            name="valorComercial"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={initial?.valorComercial}
-          />
-        </Field>
+        <div className="sm:col-span-2">
+          <Field
+            label="Valor comercial (opcional)"
+            htmlFor="valorComercial"
+            error={err("valorComercial") ?? err("valorComercialMoneda")}
+          >
+            <div className="flex gap-2">
+              <Input
+                id="valorComercial"
+                name="valorComercial"
+                type="number"
+                step="0.01"
+                min="0"
+                className="flex-1"
+                defaultValue={initial?.valorComercial}
+              />
+              <Select
+                name="valorComercialMoneda"
+                defaultValue={initial?.valorComercialMoneda ?? "CLP"}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {enumOptions(currencyLabels).map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Field>
+        </div>
           </div>
 
           {state?.error && (
@@ -261,7 +282,7 @@ export function PropertyForm({
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : submitLabel}
           </Button>
-          <Button variant="outline" render={<Link href="/propiedades" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/propiedades" />}>
             Cancelar
           </Button>
         </CardFooter>

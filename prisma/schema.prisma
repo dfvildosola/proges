@@ -118,6 +118,7 @@ enum AlertType {
   CONTRATO_POR_VENCER
   ARRIENDO_ATRASADO
   CONTRIBUCION_IMPAGA
+  CONTRIBUCION_POR_VENCER
   DESOCUPADA_PROLONGADA
 }
 
@@ -155,8 +156,9 @@ model Property {
   m2Terreno      Decimal?       @db.Decimal(10, 2)
   m2Construidos  Decimal?       @db.Decimal(10, 2)
   anoConstruccion Int?
-  valorComercial Decimal?       @db.Decimal(14, 2)
-  createdAt      DateTime       @default(now())
+  valorComercial       Decimal?  @db.Decimal(14, 2)
+  valorComercialMoneda Currency  @default(CLP)
+  createdAt            DateTime  @default(now())
   updatedAt      DateTime       @updatedAt
 
   owners      PropertyOwner[]
@@ -338,7 +340,7 @@ model PropertyTax {
   propertyId      String
   anio            Int
   cuota           Int // 1-4
-  monto           Decimal   @db.Decimal(14, 2)
+  monto           Decimal?  @db.Decimal(14, 2)
   fechaVencimiento DateTime
   estado          TaxStatus @default(PENDIENTE)
   fechaPago       DateTime?

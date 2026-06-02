@@ -17,7 +17,7 @@ import {
   currencyLabels,
   enumOptions,
 } from "@/lib/domain";
-import { addMovement, addTax } from "../actions";
+import { addMovement, addTax, generateYearTaxes, updateTaxMonto } from "../actions";
 import type { MovementFormState, TaxFormState } from "../actions";
 
 function Field({
@@ -121,6 +121,57 @@ export function AddMovementForm({ propertyId }: { propertyId: string }) {
   );
 }
 
+export function GenerateYearTaxesForm({ propertyId }: { propertyId: string }) {
+  const currentYear = new Date().getFullYear();
+  return (
+    <form action={generateYearTaxes} className="flex items-end gap-2">
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <Field label="Año" htmlFor="gen-anio">
+        <Input
+          id="gen-anio"
+          name="anio"
+          type="number"
+          step="1"
+          min="2000"
+          max="2100"
+          defaultValue={currentYear}
+          className="w-24"
+        />
+      </Field>
+      <Button type="submit" variant="outline">
+        Generar cuotas del año
+      </Button>
+    </form>
+  );
+}
+
+export function UpdateTaxMontoForm({
+  taxId,
+  propertyId,
+}: {
+  taxId: string;
+  propertyId: string;
+}) {
+  return (
+    <form action={updateTaxMonto} className="flex items-center gap-1">
+      <input type="hidden" name="taxId" value={taxId} />
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <Input
+        name="monto"
+        type="number"
+        step="0.01"
+        min="0"
+        placeholder="Ingresar monto"
+        className="h-7 w-36 text-xs"
+        required
+      />
+      <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-xs">
+        Guardar
+      </Button>
+    </form>
+  );
+}
+
 export function AddTaxForm({ propertyId }: { propertyId: string }) {
   const [state, formAction, pending] = useActionState(addTax, {} as TaxFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
@@ -128,7 +179,7 @@ export function AddTaxForm({ propertyId }: { propertyId: string }) {
   return (
     <form action={formAction} className="w-full">
       <input type="hidden" name="propertyId" value={propertyId} />
-      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[auto_auto_1fr_1fr_auto]">
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[auto_auto_1fr_auto]">
         <Field label="Año" htmlFor="tax-anio" error={err("anio")}>
           <Input
             id="tax-anio"
@@ -155,18 +206,15 @@ export function AddTaxForm({ propertyId }: { propertyId: string }) {
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Monto" htmlFor="tax-monto" error={err("monto")}>
+        <Field label="Monto (opcional)" htmlFor="tax-monto" error={err("monto")}>
           <Input
             id="tax-monto"
             name="monto"
             type="number"
             step="0.01"
             min="0"
-            placeholder="0"
+            placeholder="Sin monto"
           />
-        </Field>
-        <Field label="Vencimiento" htmlFor="fechaVencimiento" error={err("fechaVencimiento")}>
-          <Input id="fechaVencimiento" name="fechaVencimiento" type="date" />
         </Field>
         <div className="flex items-end">
           <Button type="submit" variant="outline" disabled={pending}>

@@ -121,6 +121,35 @@ export async function syncAlerts(
     });
   }
 
+  // Regla 4b: Contribuciones por vencer en ≤30 días (un alert por propiedad).
+  // Incluye cuotas sin monto registrado aún (placeholder generado automáticamente).
+  const porVencerTaxes = await db.propertyTax.findMany({
+    where: {
+      organizationId: orgId,
+      estado: "PENDIENTE",
+      fechaVencimiento: { gte: now, lte: in30Days },
+    },
+  });
+  const taxPorPropiedad = new Map<string, { sinMonto: number; conMonto: number }>();
+  for (const t of porVencerTaxes) {
+    const cur = taxPorPropiedad.get(t.propertyId) ?? { sinMonto: 0, conMonto: 0 };
+    if (t.monto === null) cur.sinMonto++;
+    else cur.conMonto++;
+    taxPorPropiedad.set(t.propertyId, cur);
+  }
+  for (const [propertyId, { sinMonto, conMonto }] of taxPorPropiedad) {
+    const total = sinMonto + conMonto;
+    const partes: string[] = [];
+    if (conMonto > 0) partes.push(`${conMonto} por vencer`);
+    if (sinMonto > 0) partes.push(`${sinMonto} sin monto registrado`);
+    specs.push({
+      tipo: AlertType.CONTRIBUCION_POR_VENCER,
+      severidad: sinMonto > 0 ? AlertSeverity.ALTA : AlertSeverity.MEDIA,
+      mensaje: `${total} cuota${total === 1 ? "" : "s"} de contribución próxima${total === 1 ? "" : "s"} a vencer (${partes.join(", ")}).`,
+      propertyId,
+    });
+  }
+
   // Regla 5: Propiedad DESOCUPADA hace >3 meses
   const desocupadas = await db.property.findMany({
     where: {

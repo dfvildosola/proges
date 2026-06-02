@@ -127,7 +127,25 @@ export const alertTypeLabels: Record<AlertType, string> = {
   CONTRATO_POR_VENCER: "Contrato por vencer",
   ARRIENDO_ATRASADO: "Arriendo atrasado",
   CONTRIBUCION_IMPAGA: "Contribución impaga",
+  CONTRIBUCION_POR_VENCER: "Contribución por vencer",
   DESOCUPADA_PROLONGADA: "Desocupada prolongada",
+};
+
+export type AlertCategory = "cobranza" | "contribuciones" | "propiedad";
+
+export const alertTypeCategory: Record<AlertType, AlertCategory> = {
+  ARRENDADA_SIN_CONTRATO: "cobranza",
+  CONTRATO_POR_VENCER: "cobranza",
+  ARRIENDO_ATRASADO: "cobranza",
+  CONTRIBUCION_IMPAGA: "contribuciones",
+  CONTRIBUCION_POR_VENCER: "contribuciones",
+  DESOCUPADA_PROLONGADA: "propiedad",
+};
+
+export const alertCategoryLabels: Record<AlertCategory, string> = {
+  cobranza: "Cobranza",
+  contribuciones: "Contribuciones",
+  propiedad: "Propiedad",
 };
 
 export const alertSeverityLabels: Record<AlertSeverity, string> = {

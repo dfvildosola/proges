@@ -61,6 +61,7 @@ const propertySchema = z.object({
   m2Construidos: moneyField,
   anoConstruccion: optionalYearField,
   valorComercial: moneyField,
+  valorComercialMoneda: enumField(Currency),
 });
 
 function parse(formData: FormData) {
@@ -77,6 +78,7 @@ function parse(formData: FormData) {
     m2Construidos: formData.get("m2Construidos") ?? "",
     anoConstruccion: formData.get("anoConstruccion") ?? "",
     valorComercial: formData.get("valorComercial") ?? "",
+    valorComercialMoneda: formData.get("valorComercialMoneda") ?? "CLP",
   });
 }
 
@@ -423,6 +425,15 @@ export type TaxFormState = {
   fieldErrors?: Record<string, string>;
 };
 
+// Meses de vencimiento de cada cuota (basados en el calendario SII Chile).
+const TAX_CUOTA_MONTH: Record<number, number> = { 1: 4, 2: 6, 3: 9, 4: 11 };
+
+function calcTaxVencimiento(anio: number, cuota: number): Date {
+  const month = TAX_CUOTA_MONTH[cuota];
+  const lastDay = new Date(Date.UTC(anio, month, 0)).getUTCDate();
+  return new Date(Date.UTC(anio, month - 1, lastDay));
+}
+
 const taxSchema = z.object({
   anio: z
     .string()
@@ -439,8 +450,14 @@ const taxSchema = z.object({
     .refine((v) => ["1", "2", "3", "4"].includes(v), {
       message: "La cuota debe ser 1, 2, 3 o 4",
     }),
-  monto: requiredMoneyField,
-  fechaVencimiento: dateField,
+  monto: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v))
+    .refine((v) => v === null || (!Number.isNaN(Number(v)) && Number(v) >= 0), {
+      message: "Debe ser un número válido",
+    }),
 });
 
 export async function addTax(
@@ -454,7 +471,6 @@ export async function addTax(
     anio: formData.get("anio"),
     cuota: formData.get("cuota"),
     monto: formData.get("monto"),
-    fechaVencimiento: formData.get("fechaVencimiento"),
   });
   if (!parsed.success) {
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
@@ -465,14 +481,16 @@ export async function addTax(
     return { error: "Propiedad no encontrada." };
 
   try {
+    const anio = Number(parsed.data.anio);
+    const cuota = Number(parsed.data.cuota);
     await db.propertyTax.create({
       data: {
         organizationId: orgId,
         propertyId,
-        anio: Number(parsed.data.anio),
-        cuota: Number(parsed.data.cuota),
+        anio,
+        cuota,
         monto: parsed.data.monto,
-        fechaVencimiento: parsed.data.fechaVencimiento,
+        fechaVencimiento: calcTaxVencimiento(anio, cuota),
         estado: TaxStatus.PENDIENTE,
       },
     });
@@ -482,6 +500,50 @@ export async function addTax(
 
   revalidatePath(`/propiedades/${propertyId}`);
   return {};
+}
+
+// Genera las 4 cuotas de un año para una propiedad. Idempotente: no pisa registros existentes.
+export async function generateYearTaxes(formData: FormData): Promise<void> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  const anioStr = String(formData.get("anio") ?? "");
+  if (!propertyId || !anioStr) return;
+  const anio = Number(anioStr);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return;
+
+  const orgId = await getOrgId();
+  if (!(await assertProperty(propertyId, orgId))) return;
+
+  for (const cuota of [1, 2, 3, 4]) {
+    await db.propertyTax.upsert({
+      where: { propertyId_anio_cuota: { propertyId, anio, cuota } },
+      create: {
+        organizationId: orgId,
+        property: { connect: { id: propertyId } },
+        anio,
+        cuota,
+        monto: null,
+        fechaVencimiento: calcTaxVencimiento(anio, cuota),
+        estado: TaxStatus.PENDIENTE,
+      },
+      update: {},
+    });
+  }
+
+  revalidatePath(`/propiedades/${propertyId}`);
+}
+
+export async function updateTaxMonto(formData: FormData): Promise<void> {
+  const taxId = String(formData.get("taxId") ?? "");
+  const propertyId = String(formData.get("propertyId") ?? "");
+  const montoStr = String(formData.get("monto") ?? "");
+  if (!taxId || !montoStr || Number.isNaN(Number(montoStr)) || Number(montoStr) < 0) return;
+
+  const orgId = await getOrgId();
+  await db.propertyTax.updateMany({
+    where: { id: taxId, organizationId: orgId },
+    data: { monto: montoStr },
+  });
+  revalidatePath(`/propiedades/${propertyId}`);
 }
 
 export async function markTaxPaid(formData: FormData): Promise<void> {

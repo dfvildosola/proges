@@ -39,16 +39,13 @@ export type PropertyRow = {
   estado: PropertyStatus;
   monedaPrincipal: Currency;
   valorComercial: number | null;
+  valorComercialMoneda: Currency;
   createdAt: string;
 };
 
 // Coincidencia para filtros multi-selección (la columna guarda un arreglo de valores).
 const inArray: ColumnDef<PropertyRow>["filterFn"] = (row, id, value) =>
   (value as string[]).includes(row.getValue(id));
-
-const moneyCell = (value: number | null) => (
-  <div className="text-right tabular-nums">{formatMoney(value)}</div>
-);
 
 const columnLabels: Record<string, string> = {
   rolSII: "ROL",
@@ -134,7 +131,11 @@ const columns: ColumnDef<PropertyRow>[] = [
         <DataTableColumnHeader column={column} title="Valor comercial" />
       </div>
     ),
-    cell: ({ row }) => moneyCell(row.original.valorComercial),
+    cell: ({ row }) => (
+      <div className="text-right tabular-nums">
+        {formatMoney(row.original.valorComercial, row.original.valorComercialMoneda)}
+      </div>
+    ),
   },
   {
     accessorKey: "createdAt",

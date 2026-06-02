@@ -110,7 +110,7 @@ export function TenantForm({
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : submitLabel}
           </Button>
-          <Button variant="outline" render={<Link href="/contactos" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/contactos" />}>
             Cancelar
           </Button>
         </CardFooter>

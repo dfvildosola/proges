@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { formatPeriodo } from "@/lib/format";
+import { MonthPicker } from "./month-picker";
 import { ChargesTable } from "./charges-table";
 import type { ChargeRow } from "./charges-table";
 import { generateMonthCharges } from "./actions";
@@ -74,24 +75,22 @@ export default async function CobranzaPage({
       />
 
       {/* Navegación por mes */}
-      <div className="mb-6 flex items-center gap-1">
+      <div className="mb-6 flex items-center gap-2">
         <Button
           variant="ghost"
-          size="sm"
-          render={<Link href={`/cobranza?mes=${prevMes}`} />}
+          size="icon-sm"
+          nativeButton={false}
+          render={<Link href={`/cobranza?mes=${prevMes}`} aria-label={formatPeriodo(prevMes)} />}
         >
           <ChevronLeft className="size-4" />
-          <span className="capitalize">{formatPeriodo(prevMes)}</span>
         </Button>
-        <span className="px-3 text-sm font-semibold capitalize">
-          {formatPeriodo(mes)}
-        </span>
+        <MonthPicker mes={mes} />
         <Button
           variant="ghost"
-          size="sm"
-          render={<Link href={`/cobranza?mes=${nextMes}`} />}
+          size="icon-sm"
+          nativeButton={false}
+          render={<Link href={`/cobranza?mes=${nextMes}`} aria-label={formatPeriodo(nextMes)} />}
         >
-          <span className="capitalize">{formatPeriodo(nextMes)}</span>
           <ChevronRight className="size-4" />
         </Button>
       </div>

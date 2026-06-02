@@ -46,14 +46,14 @@ export default async function NuevoContratoPage({
           action={
             <div className="flex gap-2">
               {properties.length === 0 && (
-                <Button render={<Link href="/propiedades/nueva" />}>
+                <Button nativeButton={false} render={<Link href="/propiedades/nueva" />}>
                   Nueva propiedad
                 </Button>
               )}
               {tenants.length === 0 && (
                 <Button
                   variant={properties.length === 0 ? "outline" : "default"}
-                  render={<Link href="/contactos/nuevo" />}
+                  nativeButton={false} render={<Link href="/contactos/nuevo" />}
                 >
                   Nuevo contacto
                 </Button>

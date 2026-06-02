@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   currencyLabels,
   adjustmentTypeLabels,
@@ -96,33 +97,23 @@ export function ContractForm({
           {/* Partes */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Propiedad" error={err("propertyId")}>
-              <Select name="propertyId" defaultValue={initial?.propertyId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Elige una propiedad" />
-                </SelectTrigger>
-                <SelectContent>
-                  {properties.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                name="propertyId"
+                options={properties}
+                defaultValue={initial?.propertyId}
+                placeholder="Elige una propiedad"
+                searchPlaceholder="Buscar propiedad…"
+              />
             </Field>
 
             <Field label="Arrendatario" error={err("tenantId")}>
-              <Select name="tenantId" defaultValue={initial?.tenantId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Elige un arrendatario" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenants.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                name="tenantId"
+                options={tenants}
+                defaultValue={initial?.tenantId}
+                placeholder="Elige un arrendatario"
+                searchPlaceholder="Buscar arrendatario…"
+              />
             </Field>
           </div>
 
@@ -260,7 +251,7 @@ export function ContractForm({
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : submitLabel}
           </Button>
-          <Button variant="outline" render={<Link href="/contratos" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/contratos" />}>
             Cancelar
           </Button>
         </CardFooter>

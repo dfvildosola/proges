@@ -74,7 +74,7 @@ export default async function ContratoDetallePage({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            render={<Link href={`/contratos/${c.id}/editar`} />}
+            nativeButton={false} render={<Link href={`/contratos/${c.id}/editar`} />}
           >
             <Pencil className="size-4" />
             Editar

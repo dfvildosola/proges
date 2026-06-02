@@ -46,9 +46,10 @@ export function formatM2(
 export function formatPeriodo(periodo: string): string {
   const [year, month] = periodo.split("-").map(Number);
   if (!year || !month) return periodo;
-  return new Intl.DateTimeFormat("es-CL", {
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  const monthName = new Intl.DateTimeFormat("es-CL", {
     month: "long",
-    year: "numeric",
     timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  }).format(date);
+  return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
 }

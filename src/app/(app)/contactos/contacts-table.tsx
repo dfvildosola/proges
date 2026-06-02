@@ -90,7 +90,7 @@ const columns: ColumnDef<TenantRow>[] = [
           variant="ghost"
           size="icon"
           aria-label={`Editar ${row.original.nombre}`}
-          render={<Link href={`/contactos/${row.original.id}/editar`} />}
+          nativeButton={false} render={<Link href={`/contactos/${row.original.id}/editar`} />}
         >
           <Pencil className="size-4" />
         </Button>

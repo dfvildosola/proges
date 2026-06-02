@@ -3,14 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
-import { syncAlerts } from "@/lib/alerts";
 
-export async function runSyncAlerts(): Promise<void> {
-  const orgId = await getOrgId();
-  await syncAlerts(orgId);
+function revalidateAll(propertyId?: string) {
   revalidatePath("/");
   revalidatePath("/pendientes");
   revalidatePath("/", "layout");
+  if (propertyId) revalidatePath(`/propiedades/${propertyId}`);
 }
 
 export async function resolveAlert(formData: FormData): Promise<void> {
@@ -24,8 +22,28 @@ export async function resolveAlert(formData: FormData): Promise<void> {
     data: { estado: "RESUELTA", resolvedAt: new Date() },
   });
 
-  revalidatePath("/");
-  revalidatePath("/pendientes");
-  revalidatePath("/", "layout");
-  if (propertyId) revalidatePath(`/propiedades/${propertyId}`);
+  revalidateAll(propertyId || undefined);
+}
+
+export async function resolvePropertyAlerts(formData: FormData): Promise<void> {
+  const propertyId = String(formData.get("propertyId") ?? "");
+  if (!propertyId) return;
+
+  const orgId = await getOrgId();
+  await db.alert.updateMany({
+    where: { propertyId, organizationId: orgId, estado: "ACTIVA" },
+    data: { estado: "RESUELTA", resolvedAt: new Date() },
+  });
+
+  revalidateAll(propertyId);
+}
+
+export async function resolveAllAlerts(): Promise<void> {
+  const orgId = await getOrgId();
+  await db.alert.updateMany({
+    where: { organizationId: orgId, estado: "ACTIVA" },
+    data: { estado: "RESUELTA", resolvedAt: new Date() },
+  });
+
+  revalidateAll();
 }

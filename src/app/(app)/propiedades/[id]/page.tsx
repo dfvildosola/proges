@@ -38,7 +38,7 @@ import { resolveAlert } from "../../pendientes/actions";
 import { formatMoney, formatDate, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
-import { AddMovementForm, AddTaxForm } from "./economic-forms";
+import { AddMovementForm, AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
 import {
   removeOwner,
   removeTag,
@@ -132,7 +132,7 @@ export default async function PropiedadDetallePage({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            render={<Link href={`/propiedades/${p.id}/editar`} />}
+            nativeButton={false} render={<Link href={`/propiedades/${p.id}/editar`} />}
           >
             <Pencil className="size-4" />
             Editar
@@ -184,7 +184,7 @@ export default async function PropiedadDetallePage({
                 />
                 <DataItem
                   label="Valor comercial"
-                  value={formatMoney(p.valorComercial)}
+                  value={formatMoney(p.valorComercial, p.valorComercialMoneda)}
                 />
               </div>
             </CardContent>
@@ -317,7 +317,7 @@ export default async function PropiedadDetallePage({
                       >
                         <div>
                           <span className="text-sm font-medium tabular-nums">
-                            {formatMoney(a.valor)}
+                            {formatMoney(a.valor, "CLP")}
                           </span>
                           <span className="ml-2 text-xs font-medium text-muted-foreground">
                             {a.anio}
@@ -391,7 +391,7 @@ export default async function PropiedadDetallePage({
                         <span className="ml-2 text-xs text-muted-foreground">
                           {u.rolSII ? `ROL ${u.rolSII}` : "Sin ROL"}
                           {u.avaluoFiscal != null &&
-                            ` · av. ${formatMoney(u.avaluoFiscal)}`}
+                            ` · av. ${formatMoney(u.avaluoFiscal, "CLP")}`}
                         </span>
                       </div>
                       <form action={removeUnit}>
@@ -448,7 +448,7 @@ export default async function PropiedadDetallePage({
                 <Button
                   size="sm"
                   variant="outline"
-                  render={<Link href={`/contratos/nuevo?propertyId=${p.id}`} />}
+                  nativeButton={false} render={<Link href={`/contratos/nuevo?propertyId=${p.id}`} />}
                 >
                   <Plus className="size-4" />
                   Nuevo contrato
@@ -541,8 +541,9 @@ export default async function PropiedadDetallePage({
 
         <TabsContent value="contribuciones" className="mt-6 max-w-3xl">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Contribuciones</CardTitle>
+              <GenerateYearTaxesForm propertyId={p.id} />
             </CardHeader>
             <CardContent className="space-y-3">
               {p.taxes.length === 0 ? (
@@ -561,7 +562,7 @@ export default async function PropiedadDetallePage({
                           Cuota {t.cuota} · {t.anio}
                         </span>
                         <span className="ml-2 text-xs text-muted-foreground">
-                          {formatMoney(t.monto)} · vence{" "}
+                          {t.monto !== null ? `${formatMoney(t.monto)} · ` : ""}vence{" "}
                           {formatDate(t.fechaVencimiento)}
                         </span>
                         {t.estado === "PAGADA" && t.fechaPago && (
@@ -574,7 +575,10 @@ export default async function PropiedadDetallePage({
                         <Badge variant={taxStatusVariant(t.estado)}>
                           {taxStatusLabels[t.estado]}
                         </Badge>
-                        {t.estado === "PENDIENTE" && (
+                        {t.estado === "PENDIENTE" && t.monto === null && (
+                          <UpdateTaxMontoForm taxId={t.id} propertyId={p.id} />
+                        )}
+                        {t.estado === "PENDIENTE" && t.monto !== null && (
                           <form
                             action={markTaxPaid}
                             className="flex items-center gap-1"

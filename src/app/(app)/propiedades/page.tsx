@@ -26,6 +26,7 @@ export default async function PropiedadesPage() {
     estado: p.estado,
     monedaPrincipal: p.monedaPrincipal,
     valorComercial: p.valorComercial ? Number(p.valorComercial) : null,
+    valorComercialMoneda: p.valorComercialMoneda,
     createdAt: p.createdAt.toISOString(),
   }));
 
@@ -35,7 +36,7 @@ export default async function PropiedadesPage() {
         title="Propiedades"
         description="Tu cartera. Cada propiedad abre su ficha con documentos, contrato, económico y alertas."
         action={
-          <Button render={<Link href="/propiedades/nueva" />}>
+          <Button nativeButton={false} render={<Link href="/propiedades/nueva" />}>
             <Plus className="size-4" />
             Nueva propiedad
           </Button>
@@ -48,7 +49,7 @@ export default async function PropiedadesPage() {
           title="Todavía no hay propiedades"
           description="Crea la primera propiedad para empezar a cargar tu cartera."
           action={
-            <Button render={<Link href="/propiedades/nueva" />}>
+            <Button nativeButton={false} render={<Link href="/propiedades/nueva" />}>
               <Plus className="size-4" />
               Nueva propiedad
             </Button>

@@ -40,7 +40,7 @@ export default async function ContratosPage() {
         title="Contratos"
         description="Los arriendos de la cartera: vigentes, por vencer, con sus datos de reajuste."
         action={
-          <Button render={<Link href="/contratos/nuevo" />}>
+          <Button nativeButton={false} render={<Link href="/contratos/nuevo" />}>
             <Plus className="size-4" />
             Nuevo contrato
           </Button>
@@ -53,7 +53,7 @@ export default async function ContratosPage() {
           title="Todavía no hay contratos"
           description="Crea un contrato de arriendo vinculando una propiedad y un arrendatario."
           action={
-            <Button render={<Link href="/contratos/nuevo" />}>
+            <Button nativeButton={false} render={<Link href="/contratos/nuevo" />}>
               <Plus className="size-4" />
               Nuevo contrato
             </Button>

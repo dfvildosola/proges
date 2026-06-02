@@ -33,7 +33,7 @@ export default async function ContactosPage({
         title="Contactos"
         description="Arrendatarios de la cartera, vinculados a sus contratos."
         action={
-          <Button render={<Link href="/contactos/nuevo" />}>
+          <Button nativeButton={false} render={<Link href="/contactos/nuevo" />}>
             <Plus className="size-4" />
             Nuevo contacto
           </Button>
@@ -53,7 +53,7 @@ export default async function ContactosPage({
           title="Todavía no hay contactos"
           description="Crea un arrendatario para poder asociarlo a un contrato de arriendo."
           action={
-            <Button render={<Link href="/contactos/nuevo" />}>
+            <Button nativeButton={false} render={<Link href="/contactos/nuevo" />}>
               <Plus className="size-4" />
               Nuevo contacto
             </Button>
