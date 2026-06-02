@@ -219,15 +219,37 @@ model PropertyTag {
   @@index([organizationId])
 }
 
+// Grupo económico / controlador: el "dueño real" (familia o persona) que controla
+// varias entidades legales (personas y sociedades). Permite consolidar el
+// patrimonio de todas sus entidades en los informes. Opcional: una entidad puede
+// no pertenecer a ningún grupo.
+model Grupo {
+  id             String   @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String? // RUT del controlador/persona, opcional
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owners Owner[]
+
+  @@index([organizationId])
+}
+
+// Entidad legal dueña de propiedades: persona natural o sociedad. Reutilizable
+// entre propiedades (una misma entidad participa en varias vía PropertyOwner).
 model Owner {
   id             String          @id @default(cuid())
   organizationId String
   nombre         String
   rut            String
   tipo           OwnerType       @default(PERSONA)
+  grupoId        String?
+  grupo          Grupo?          @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   properties     PropertyOwner[]
 
   @@index([organizationId])
+  @@index([grupoId])
 }
 
 // Puente de copropiedad: varios dueños por propiedad, cada uno con su %.

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Plus } from "lucide-react";
+import type { OwnerType } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,50 +19,103 @@ import {
 } from "@/lib/domain";
 import { addOwner, addTag, addUnit, addAssessment } from "../actions";
 
-export function AddOwnerForm({ propertyId }: { propertyId: string }) {
+const NUEVA = "__nueva__";
+
+type Entidad = { id: string; nombre: string; tipo: OwnerType };
+
+export function AddOwnerForm({
+  propertyId,
+  entidades,
+}: {
+  propertyId: string;
+  entidades: Entidad[];
+}) {
   const [state, formAction, pending] = useActionState(addOwner, {});
   const err = (f: string) => state?.fieldErrors?.[f];
+  const [sel, setSel] = useState(NUEVA);
+  const isNew = sel === NUEVA;
+
+  // Mapa valor→etiqueta para que el trigger muestre el nombre elegido.
+  const items: Record<string, string> = { [NUEVA]: "➕ Nueva entidad" };
+  for (const e of entidades)
+    items[e.id] = `${e.nombre} · ${ownerTypeLabels[e.tipo]}`;
 
   return (
-    <form
-      action={formAction}
-      className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto]"
-    >
+    <form action={formAction} className="space-y-2">
       <input type="hidden" name="propertyId" value={propertyId} />
-      <div>
-        <Input name="nombre" placeholder="Nombre o razón social" />
-        {err("nombre") && (
-          <p className="mt-1 text-xs text-destructive">{err("nombre")}</p>
-        )}
+      <input type="hidden" name="ownerId" value={isNew ? "" : sel} />
+
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-56 flex-1">
+          <Select
+            items={items}
+            value={sel}
+            onValueChange={(v) => setSel(v ?? NUEVA)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NUEVA}>➕ Nueva entidad</SelectItem>
+              {entidades.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.nombre} · {ownerTypeLabels[e.tipo]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-24">
+          <Input
+            name="porcentaje"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            placeholder="%"
+          />
+          {err("porcentaje") && (
+            <p className="mt-1 text-xs text-destructive">{err("porcentaje")}</p>
+          )}
+        </div>
+        <Button type="submit" variant="outline" disabled={pending}>
+          <Plus className="size-4" />
+          Agregar
+        </Button>
       </div>
-      <div>
-        <Input name="rut" placeholder="RUT" />
-        {err("rut") && (
-          <p className="mt-1 text-xs text-destructive">{err("rut")}</p>
-        )}
-      </div>
-      <Select name="tipo" defaultValue="PERSONA">
-        <SelectTrigger className="w-32">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {enumOptions(ownerTypeLabels).map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <div className="w-24">
-        <Input name="porcentaje" type="number" step="0.01" min="0" max="100" placeholder="%" />
-        {err("porcentaje") && (
-          <p className="mt-1 text-xs text-destructive">{err("porcentaje")}</p>
-        )}
-      </div>
-      <Button type="submit" variant="outline" disabled={pending}>
-        <Plus className="size-4" />
-        Agregar
-      </Button>
+
+      {isNew && (
+        <div className="flex flex-wrap items-start gap-2">
+          <div className="min-w-48 flex-1">
+            <Input name="nombre" placeholder="Nombre o razón social" />
+            {err("nombre") && (
+              <p className="mt-1 text-xs text-destructive">{err("nombre")}</p>
+            )}
+          </div>
+          <div className="min-w-32 flex-1">
+            <Input name="rut" placeholder="RUT" />
+            {err("rut") && (
+              <p className="mt-1 text-xs text-destructive">{err("rut")}</p>
+            )}
+          </div>
+          <Select name="tipo" defaultValue="PERSONA">
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {enumOptions(ownerTypeLabels).map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {state?.error && (
+        <p className="text-xs text-destructive">{state.error}</p>
+      )}
     </form>
   );
 }

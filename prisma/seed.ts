@@ -14,6 +14,10 @@ const db = new PrismaClient({ adapter });
 
 const ORG = "org_proges";
 
+// UF de referencia para generar avalúos fiscales en CLP a partir de valores
+// comerciales en UF (los valores UF reales se cargan más abajo en CurrencyValue).
+const UF_REF = 38100;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -166,6 +170,7 @@ async function main() {
   await db.propertyOwner.deleteMany({ where: { organizationId: ORG } });
   await db.property.deleteMany({ where: { organizationId: ORG } });
   await db.owner.deleteMany({ where: { organizationId: ORG } });
+  await db.grupo.deleteMany({ where: { organizationId: ORG } });
   await db.propertyTag.deleteMany({ where: { organizationId: ORG } });
   await db.currencyValue.deleteMany();
 
@@ -183,19 +188,47 @@ async function main() {
   // Owners
   // -------------------------------------------------------------------------
   console.log("👤  Creando propietarios...");
-  const owners = await Promise.all([
-    ...NOMBRES_PERSONA.slice(0, 8).map((nombre, i) =>
+
+  // Sociedades de un MISMO grupo económico (el dueño real). Concentran la GRAN
+  // MAYORÍA de las propiedades: el usuario típico es dueño de casi toda su cartera.
+  const empresasGrupo = await Promise.all(
+    [
+      ["Inversiones Vildósola SpA", 76543210],
+      ["Inmobiliaria VF Ltda.", 76012345],
+      ["Rentas Vildósola SpA", 77111222],
+      ["Constructora VF S.A.", 96333444],
+    ].map(([nombre, num]) =>
       db.owner.create({
-        data: { organizationId: ORG, nombre, rut: rut(RUTS_PERSONA[i]), tipo: "PERSONA" },
+        data: { organizationId: ORG, nombre: nombre as string, rut: rut(num as number), tipo: "SOCIEDAD" },
       })
-    ),
+    )
+  );
+
+  // Pocos terceros sin grupo (copropietarios/otros dueños), con pocas propiedades.
+  const terceros = await Promise.all([
     db.owner.create({
-      data: { organizationId: ORG, nombre: "Inversiones Vildósola SpA", rut: rut(76543210), tipo: "SOCIEDAD" },
+      data: { organizationId: ORG, nombre: NOMBRES_PERSONA[0], rut: rut(RUTS_PERSONA[0]), tipo: "PERSONA" },
     }),
     db.owner.create({
-      data: { organizationId: ORG, nombre: "Inmobiliaria VF Ltda.", rut: rut(76012345), tipo: "SOCIEDAD" },
+      data: { organizationId: ORG, nombre: NOMBRES_PERSONA[1], rut: rut(RUTS_PERSONA[1]), tipo: "PERSONA" },
+    }),
+    db.owner.create({
+      data: { organizationId: ORG, nombre: "Inmobiliaria Andes SpA", rut: rut(76998877), tipo: "SOCIEDAD" },
     }),
   ]);
+
+  // -------------------------------------------------------------------------
+  // Grupo económico: un controlador con varias sociedades (mismo dueño).
+  // Las independientes y las personas quedan sin grupo (para mostrar ese estado).
+  // -------------------------------------------------------------------------
+  console.log("🏛️   Creando grupo económico...");
+  const grupoVildosola = await db.grupo.create({
+    data: { organizationId: ORG, nombre: "Grupo Vildósola", rut: rut(11222333) },
+  });
+  await db.owner.updateMany({
+    where: { id: { in: empresasGrupo.map((e) => e.id) } },
+    data: { grupoId: grupoVildosola.id },
+  });
 
   // -------------------------------------------------------------------------
   // Tenants
@@ -231,6 +264,11 @@ async function main() {
     const estado = estados[i];
     const objetivo = estado === "EN_VENTA" ? "VENTA" : estado === "USO_PROPIO" ? "USO_PROPIO" : "INVERSION";
 
+    const valorComercial =
+      tpl.moneda === "UF"
+        ? +(3000 + Math.random() * 7000).toFixed(2)
+        : +(80000000 + Math.random() * 200000000).toFixed(0);
+
     const prop = await db.property.create({
       data: {
         organizationId: ORG,
@@ -245,31 +283,49 @@ async function main() {
         m2Construidos: +(tpl.m2Min + Math.random() * (tpl.m2Max - tpl.m2Min)).toFixed(2),
         m2Terreno: tpl.tipo === "CASA" ? +(100 + Math.random() * 300).toFixed(2) : null,
         anoConstruccion: 1980 + Math.floor(Math.random() * 45),
-        valorComercial: tpl.moneda === "UF"
-          ? +(3000 + Math.random() * 7000).toFixed(2)
-          : +(80000000 + Math.random() * 200000000).toFixed(0),
+        valorComercial,
         valorComercialMoneda: tpl.moneda,
         tags: i % 7 === 0 ? { connect: [{ id: pick(tags).id }] } : undefined,
       },
     });
 
-    // Avalúo fiscal
+    // Avalúo fiscal: SIEMPRE en CLP (en Chile el avalúo es en pesos; el modelo
+    // no guarda moneda). Se fija como ~55-80% del valor comercial en CLP, que es
+    // lo típico (el avalúo suele ir por debajo del comercial).
+    const comercialCLP =
+      tpl.moneda === "UF" ? valorComercial * UF_REF : valorComercial;
     await db.propertyAssessment.create({
       data: {
         organizationId: ORG,
         propertyId: prop.id,
         anio: 2025,
-        valor: tpl.moneda === "UF"
-          ? +(1500 + Math.random() * 5000).toFixed(2)
-          : +(40000000 + Math.random() * 120000000).toFixed(0),
+        valor: Math.round(comercialCLP * (0.55 + Math.random() * 0.25)),
       },
     });
 
-    // Propietario(s)
-    const mainOwner = owners[i % owners.length];
-    await db.propertyOwner.create({
-      data: { organizationId: ORG, propertyId: prop.id, ownerId: mainOwner.id, porcentaje: 100 },
-    });
+    // Propietario(s): el grupo concentra ~85% de la cartera; pocos a terceros.
+    if (i === 0) {
+      // Copropiedad entre DOS empresas del mismo grupo (Grupo Vildósola):
+      // el grupo ve el 100%, cada empresa su parte. Demuestra la consolidación.
+      await db.propertyOwner.create({
+        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresasGrupo[0].id, porcentaje: 60 },
+      });
+      await db.propertyOwner.create({
+        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresasGrupo[1].id, porcentaje: 40 },
+      });
+    } else if (i % 7 === 6) {
+      // 1 de cada 7 va a un tercero sin grupo (≈7 propiedades en total).
+      const tercero = terceros[Math.floor(i / 7) % terceros.length];
+      await db.propertyOwner.create({
+        data: { organizationId: ORG, propertyId: prop.id, ownerId: tercero.id, porcentaje: 100 },
+      });
+    } else {
+      // El resto se reparte entre las sociedades del grupo.
+      const empresa = empresasGrupo[i % empresasGrupo.length];
+      await db.propertyOwner.create({
+        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresa.id, porcentaje: 100 },
+      });
+    }
 
     properties.push({ prop, tpl, estado });
   }
@@ -375,6 +431,65 @@ async function main() {
           fechaPago,
           montoPagado,
           interesMora: estado === "ATRASADO" ? +(montoRaw * 0.03).toFixed(0) : null,
+        },
+      });
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Movimientos económicos 2026 (gastos manuales por propiedad)
+  // El ingreso por arriendo vive en RentCharge; aquí van los GASTOS del libro:
+  // gasto común, reparaciones, seguro. Todos en CLP (así se pagan en la práctica).
+  // -------------------------------------------------------------------------
+  console.log("💸  Creando movimientos de gasto 2026...");
+  const mesActual = hoy.getUTCMonth() + 1; // 6 (junio)
+  for (const { prop, tpl } of properties) {
+    // Gasto común mensual (depto/oficina/bodega/local en edificio)
+    if (["DEPARTAMENTO", "OFICINA", "BODEGA", "LOCAL"].includes(tpl.tipo)) {
+      const mensual = 40000 + Math.floor(Math.random() * 160000);
+      for (let mes = 1; mes <= mesActual; mes++) {
+        await db.movement.create({
+          data: {
+            organizationId: ORG,
+            propertyId: prop.id,
+            tipo: "GASTO",
+            categoria: "GASTO_COMUN",
+            monto: mensual,
+            moneda: "CLP",
+            fecha: date(2026, mes, 5),
+            descripcion: "Gasto común",
+          },
+        });
+      }
+    }
+    // Seguro anual (~enero)
+    if (Math.random() < 0.6) {
+      await db.movement.create({
+        data: {
+          organizationId: ORG,
+          propertyId: prop.id,
+          tipo: "GASTO",
+          categoria: "SEGURO",
+          monto: 150000 + Math.floor(Math.random() * 500000),
+          moneda: "CLP",
+          fecha: date(2026, 1, pick([10, 15, 20])),
+          descripcion: "Seguro anual",
+        },
+      });
+    }
+    // Reparaciones ocasionales (0-2 en el año)
+    const nReparaciones = Math.floor(Math.random() * 3);
+    for (let r = 0; r < nReparaciones; r++) {
+      await db.movement.create({
+        data: {
+          organizationId: ORG,
+          propertyId: prop.id,
+          tipo: "GASTO",
+          categoria: "REPARACION",
+          monto: 80000 + Math.floor(Math.random() * 1500000),
+          moneda: "CLP",
+          fecha: date(2026, 1 + Math.floor(Math.random() * mesActual), pick([3, 12, 21, 27])),
+          descripcion: pick(["Reparación gasfitería", "Pintura", "Arreglo eléctrico", "Cambio de artefactos"]),
         },
       });
     }
