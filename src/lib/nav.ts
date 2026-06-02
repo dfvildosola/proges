@@ -8,6 +8,7 @@ import {
   Building2,
   FileText,
   Users,
+  PieChart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Cartera",
     items: [
+      { href: "/resumen", label: "Resumen", icon: PieChart },
       { href: "/propiedades", label: "Propiedades", icon: Building2 },
       { href: "/contratos", label: "Contratos", icon: FileText },
       { href: "/contactos", label: "Contactos", icon: Users },
